@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from accounts.models import User
 from products.models import Product, ProductVariant, ProductSize
 from orders.models import Order, OrderItem, ShippingAddress, OrderStatusHistory
+from settings.models import StoreSettings
 from decimal import Decimal
 import uuid
 
@@ -13,6 +14,19 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write('Setting up initial data...')
+        
+        # Create initial store settings
+        store_settings, created = StoreSettings.objects.get_or_create(
+            pk=1,
+            defaults={
+                'currency': 'USD',
+                'timezone': 'UTC'
+            }
+        )
+        if created:
+            self.stdout.write('Created initial store settings')
+        else:
+            self.stdout.write('Store settings already exist')
         
         # Create sample admin user
         admin_user, created = User.objects.get_or_create(
@@ -501,3 +515,4 @@ class Command(BaseCommand):
         self.stdout.write(f'- {Order.objects.count()} orders')
         self.stdout.write(f'- {OrderItem.objects.count()} order items')
         self.stdout.write(f'- {OrderStatusHistory.objects.count()} status history entries')
+        self.stdout.write(f'- {StoreSettings.objects.count()} store settings')

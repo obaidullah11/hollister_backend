@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holister Shopping Flow API Testing Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .auth-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .auth-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .auth-tabs {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .auth-tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .auth-status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #6c757d;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #6c757d;
+            display: inline-block;
+        }
+
+        .status-dot.authenticated {
+            background: #28a745;
+        }
+
+        .status-dot.error {
+            background: #dc3545;
+        }
+
+        .status-text {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .endpoint-list {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .endpoint-item {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .endpoint-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .endpoint-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .endpoint-item h4 {
+            font-size: 1em;
+            margin-bottom: 5px;
+        }
+
+        .endpoint-item p {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .content-area {
+            padding: 30px;
+        }
+
+        .endpoint-details {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .endpoint-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .method-badge {
+            background: #28a745;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .method-badge.post { background: #007bff; }
+        .method-badge.get { background: #28a745; }
+        .method-badge.put { background: #ffc107; color: #212529; }
+        .method-badge.delete { background: #dc3545; }
+
+        .endpoint-url {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            color: #495057;
+        }
+
+        .form-section {
+            margin-bottom: 25px;
+        }
+
+        .form-section h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .response-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .json-display {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .cart-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .cart-summary h3 {
+            margin-bottom: 15px;
+        }
+
+        .cart-item {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛍️ Holister Shopping Flow API</h1>
+            <p>Complete Testing Interface for Shopping Cart & Order Management</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="auth-section">
+                    <h3>🔐 Authentication</h3>
+                    <div class="form-group">
+                        <label for="baseUrl">Base URL:</label>
+                        <input type="text" id="baseUrl" value="http://localhost:8000" placeholder="Base URL (e.g., http://localhost:8000)">
+                    </div>
+                    
+                    <div class="auth-tabs">
+                        <div class="auth-tab active" onclick="switchAuthTab('login')">Login</div>
+                        <div class="auth-tab" onclick="switchAuthTab('register')">Register</div>
+                        <div class="auth-tab" onclick="switchAuthTab('token')">Token</div>
+                    </div>
+                    
+                    <!-- Login Form -->
+                    <div id="login-form" class="auth-form active">
+                        <div class="form-group">
+                            <label for="loginEmail">Email:</label>
+                            <input type="email" id="loginEmail" placeholder="Enter your email">
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">Password:</label>
+                            <input type="password" id="loginPassword" placeholder="Enter your password">
+                        </div>
+                        <button class="btn" onclick="login()">Login</button>
+                        <button class="btn btn-secondary" onclick="forgotPassword()">Forgot Password</button>
+                    </div>
+                    
+                    <!-- Register Form -->
+                    <div id="register-form" class="auth-form">
+                        <div class="form-group">
+                            <label for="registerEmail">Email:</label>
+                            <input type="email" id="registerEmail" placeholder="Enter your email">
+                        </div>
+                        <div class="form-group">
+                            <label for="registerPassword">Password:</label>
+                            <input type="password" id="registerPassword" placeholder="Enter your password">
+                        </div>
+                        <div class="form-group">
+                            <label for="registerConfirmPassword">Confirm Password:</label>
+                            <input type="password" id="registerConfirmPassword" placeholder="Confirm your password">
+                        </div>
+                        <div class="form-group">
+                            <label for="registerFirstName">First Name:</label>
+                            <input type="text" id="registerFirstName" placeholder="Enter your first name">
+                        </div>
+                        <div class="form-group">
+                            <label for="registerLastName">Last Name:</label>
+                            <input type="text" id="registerLastName" placeholder="Enter your last name">
+                        </div>
+                        <button class="btn" onclick="register()">Register</button>
+                    </div>
+                    
+                    <!-- Token Management -->
+                    <div id="token-form" class="auth-form">
+                        <div class="form-group">
+                            <label for="jwtToken">JWT Token:</label>
+                            <input type="text" id="jwtToken" placeholder="Enter your JWT token">
+                        </div>
+                        <button class="btn" onclick="testAuth()">Test Token</button>
+                        <button class="btn btn-secondary" onclick="refreshToken()">Refresh Token</button>
+                        <button class="btn btn-danger" onclick="clearToken()">Clear Token</button>
+                    </div>
+                    
+                    <!-- Auth Status -->
+                    <div class="auth-status">
+                        <div class="status-indicator" id="authStatus">
+                            <span class="status-dot"></span>
+                            <span class="status-text">Not Authenticated</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="endpoint-list">
+                    <div class="endpoint-item active" onclick="showEndpoint('products')">
+                        <h4>📦 Products</h4>
+                        <p>Browse and view products</p>
+                    </div>
+                    <div class="endpoint-item" onclick="showEndpoint('cart')">
+                        <h4>🛒 Cart Management</h4>
+                        <p>Add, update, remove items</p>
+                    </div>
+                    <div class="endpoint-item" onclick="showEndpoint('addresses')">
+                        <h4>📍 Addresses</h4>
+                        <p>Manage shipping addresses</p>
+                    </div>
+                    <div class="endpoint-item" onclick="showEndpoint('checkout')">
+                        <h4>💳 Checkout</h4>
+                        <p>Process orders</p>
+                    </div>
+                    <div class="endpoint-item" onclick="showEndpoint('orders')">
+                        <h4>📋 Orders</h4>
+                        <p>View order history</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <!-- Products Section -->
+                <div id="products" class="endpoint-details">
+                    <div class="endpoint-header">
+                        <span class="method-badge get">GET</span>
+                        <span class="endpoint-url">/products/products/</span>
+                    </div>
+                    
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('products', 'browse')">Browse Products</div>
+                        <div class="tab" onclick="switchTab('products', 'detail')">Product Detail</div>
+                    </div>
+
+                    <div id="products-browse" class="tab-content active">
+                        <div class="form-section">
+                            <h4>Get All Products</h4>
+                            <button class="btn" onclick="getProducts()">Fetch Products</button>
+                        </div>
+                    </div>
+
+                    <div id="products-detail" class="tab-content">
+                        <div class="form-section">
+                            <h4>Get Product Details</h4>
+                            <div class="form-group">
+                                <label for="productId">Product ID:</label>
+                                <input type="number" id="productId" value="1" placeholder="Enter product ID">
+                            </div>
+                            <button class="btn" onclick="getProductDetail()">Get Product</button>
+                        </div>
+                    </div>
+
+                    <div class="response-section">
+                        <div class="response-header">
+                            <h4>Response</h4>
+                            <span id="products-status" class="status-badge">Ready</span>
+                        </div>
+                        <div id="products-response" class="json-display">Click "Fetch Products" to see results</div>
+                    </div>
+                </div>
+
+                <!-- Cart Section -->
+                <div id="cart" class="endpoint-details hidden">
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('cart', 'view')">View Cart</div>
+                        <div class="tab" onclick="switchTab('cart', 'add')">Add to Cart</div>
+                        <div class="tab" onclick="switchTab('cart', 'update')">Update Cart</div>
+                        <div class="tab" onclick="switchTab('cart', 'remove')">Remove Item</div>
+                        <div class="tab" onclick="switchTab('cart', 'clear')">Clear Cart</div>
+                    </div>
+
+                    <div id="cart-view" class="tab-content active">
+                        <div class="form-section">
+                            <h4>View Current Cart</h4>
+                            <button class="btn" onclick="getCart()">Get Cart</button>
+                        </div>
+                    </div>
+
+                    <div id="cart-add" class="tab-content">
+                        <div class="form-section">
+                            <h4>Add Product to Cart</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="addProductId">Product ID:</label>
+                                    <input type="number" id="addProductId" value="1" placeholder="Product ID">
+                                </div>
+                                <div class="form-group">
+                                    <label for="addQuantity">Quantity:</label>
+                                    <input type="number" id="addQuantity" value="1" min="1" placeholder="Quantity">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="addVariantId">Variant ID (optional):</label>
+                                    <input type="number" id="addVariantId" placeholder="Variant ID">
+                                </div>
+                                <div class="form-group">
+                                    <label for="addSizeId">Size ID (optional):</label>
+                                    <input type="number" id="addSizeId" placeholder="Size ID">
+                                </div>
+                            </div>
+                            <button class="btn" onclick="addToCart()">Add to Cart</button>
+                        </div>
+                    </div>
+
+                    <div id="cart-update" class="tab-content">
+                        <div class="form-section">
+                            <h4>Update Cart Item</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="updateItemId">Cart Item ID:</label>
+                                    <input type="number" id="updateItemId" placeholder="Cart item ID">
+                                </div>
+                                <div class="form-group">
+                                    <label for="updateQuantity">New Quantity:</label>
+                                    <input type="number" id="updateQuantity" value="1" min="1" placeholder="New quantity">
+                                </div>
+                            </div>
+                            <button class="btn" onclick="updateCartItem()">Update Item</button>
+                        </div>
+                    </div>
+
+                    <div id="cart-remove" class="tab-content">
+                        <div class="form-section">
+                            <h4>Remove Item from Cart</h4>
+                            <div class="form-group">
+                                <label for="removeItemId">Cart Item ID:</label>
+                                <input type="number" id="removeItemId" placeholder="Cart item ID">
+                            </div>
+                            <button class="btn btn-danger" onclick="removeFromCart()">Remove Item</button>
+                        </div>
+                    </div>
+
+                    <div id="cart-clear" class="tab-content">
+                        <div class="form-section">
+                            <h4>Clear Entire Cart</h4>
+                            <p>This will remove all items from your cart.</p>
+                            <button class="btn btn-danger" onclick="clearCart()">Clear Cart</button>
+                        </div>
+                    </div>
+
+                    <div class="response-section">
+                        <div class="response-header">
+                            <h4>Response</h4>
+                            <span id="cart-status" class="status-badge">Ready</span>
+                        </div>
+                        <div id="cart-response" class="json-display">Click "Get Cart" to see results</div>
+                    </div>
+                </div>
+
+                <!-- Addresses Section -->
+                <div id="addresses" class="endpoint-details hidden">
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('addresses', 'list')">List Addresses</div>
+                        <div class="tab" onclick="switchTab('addresses', 'create')">Create Address</div>
+                    </div>
+
+                    <div id="addresses-list" class="tab-content active">
+                        <div class="form-section">
+                            <h4>Get User's Shipping Addresses</h4>
+                            <button class="btn" onclick="getAddresses()">Get Addresses</button>
+                        </div>
+                    </div>
+
+                    <div id="addresses-create" class="tab-content">
+                        <div class="form-section">
+                            <h4>Create New Shipping Address</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="addressLine1">Address Line 1:</label>
+                                    <input type="text" id="addressLine1" placeholder="123 Main Street">
+                                </div>
+                                <div class="form-group">
+                                    <label for="addressLine2">Address Line 2:</label>
+                                    <input type="text" id="addressLine2" placeholder="Apt 4B">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="city">City:</label>
+                                    <input type="text" id="city" placeholder="New York">
+                                </div>
+                                <div class="form-group">
+                                    <label for="state">State:</label>
+                                    <input type="text" id="state" placeholder="NY">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="postalCode">Postal Code:</label>
+                                    <input type="text" id="postalCode" placeholder="10001">
+                                </div>
+                                <div class="form-group">
+                                    <label for="country">Country:</label>
+                                    <input type="text" id="country" value="United States" placeholder="Country">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="isDefault"> Set as default address
+                                </label>
+                            </div>
+                            <button class="btn" onclick="createAddress()">Create Address</button>
+                        </div>
+                    </div>
+
+                    <div class="response-section">
+                        <div class="response-header">
+                            <h4>Response</h4>
+                            <span id="addresses-status" class="status-badge">Ready</span>
+                        </div>
+                        <div id="addresses-response" class="json-display">Click "Get Addresses" to see results</div>
+                    </div>
+                </div>
+
+                <!-- Checkout Section -->
+                <div id="checkout" class="endpoint-details hidden">
+                    <div class="endpoint-header">
+                        <span class="method-badge post">POST</span>
+                        <span class="endpoint-url">/orders/checkout/</span>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>Process Checkout</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="checkoutEmail">Email:</label>
+                                <input type="email" id="checkoutEmail" placeholder="customer@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="checkoutPhone">Phone Number:</label>
+                                <input type="text" id="checkoutPhone" placeholder="+1234567890">
+                            </div>
+                        </div>
+                        
+                        <h4>Shipping Address</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="shippingAddress1">Address Line 1:</label>
+                                <input type="text" id="shippingAddress1" placeholder="123 Main Street">
+                            </div>
+                            <div class="form-group">
+                                <label for="shippingAddress2">Address Line 2:</label>
+                                <input type="text" id="shippingAddress2" placeholder="Apt 4B">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="shippingCity">City:</label>
+                                <input type="text" id="shippingCity" placeholder="New York">
+                            </div>
+                            <div class="form-group">
+                                <label for="shippingState">State:</label>
+                                <input type="text" id="shippingState" placeholder="NY">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="shippingPostal">Postal Code:</label>
+                                <input type="text" id="shippingPostal" placeholder="10001">
+                            </div>
+                            <div class="form-group">
+                                <label for="shippingCountry">Country:</label>
+                                <input type="text" id="shippingCountry" value="United States" placeholder="Country">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="checkoutNotes">Notes (optional):</label>
+                            <textarea id="checkoutNotes" rows="3" placeholder="Please deliver after 6 PM"></textarea>
+                        </div>
+                        
+                        <button class="btn btn-success" onclick="processCheckout()">Process Checkout</button>
+                    </div>
+
+                    <div class="response-section">
+                        <div class="response-header">
+                            <h4>Response</h4>
+                            <span id="checkout-status" class="status-badge">Ready</span>
+                        </div>
+                        <div id="checkout-response" class="json-display">Fill the form and click "Process Checkout" to see results</div>
+                    </div>
+                </div>
+
+                <!-- Orders Section -->
+                <div id="orders" class="endpoint-details hidden">
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('orders', 'list')">Order List</div>
+                        <div class="tab" onclick="switchTab('orders', 'detail')">Order Detail</div>
+                    </div>
+
+                    <div id="orders-list" class="tab-content active">
+                        <div class="form-section">
+                            <h4>Get All Orders</h4>
+                            <button class="btn" onclick="getOrders()">Get Orders</button>
+                        </div>
+                    </div>
+
+                    <div id="orders-detail" class="tab-content">
+                        <div class="form-section">
+                            <h4>Get Order Details</h4>
+                            <div class="form-group">
+                                <label for="orderId">Order ID:</label>
+                                <input type="number" id="orderId" placeholder="Enter order ID">
+                            </div>
+                            <button class="btn" onclick="getOrderDetail()">Get Order</button>
+                        </div>
+                    </div>
+
+                    <div class="response-section">
+                        <div class="response-header">
+                            <h4>Response</h4>
+                            <span id="orders-status" class="status-badge">Ready</span>
+                        </div>
+                        <div id="orders-response" class="json-display">Click "Get Orders" to see results</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentEndpoint = 'products';
+        let currentTab = 'browse';
+
+        // Utility functions
+        function getBaseUrl() {
+            let baseUrl = document.getElementById('baseUrl').value;
+            // Remove trailing slash to avoid double slashes
+            return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+        }
+
+        function getAuthHeaders() {
+            const token = document.getElementById('jwtToken').value;
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+        }
+
+        function showResponse(elementId, data, status = 'success') {
+            const element = document.getElementById(elementId);
+            const statusElement = document.getElementById(elementId.replace('-response', '-status'));
+            
+            element.textContent = JSON.stringify(data, null, 2);
+            statusElement.textContent = status === 'success' ? 'Success' : 'Error';
+            statusElement.className = `status-badge ${status === 'success' ? 'status-success' : 'status-error'}`;
+        }
+
+        function showError(elementId, error) {
+            showResponse(elementId, { error: error.message || error }, 'error');
+        }
+
+        async function makeRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    headers: getAuthHeaders(),
+                    ...options
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.message || `HTTP ${response.status}`);
+                }
+                
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Navigation functions
+        function showEndpoint(endpoint) {
+            // Hide all endpoint details
+            document.querySelectorAll('.endpoint-details').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.endpoint-item').forEach(el => el.classList.remove('active'));
+            
+            // Show selected endpoint
+            document.getElementById(endpoint).classList.remove('hidden');
+            event.target.closest('.endpoint-item').classList.add('active');
+            
+            currentEndpoint = endpoint;
+            currentTab = Object.keys(document.querySelector(`#${endpoint} .tab-content`))[0] || 'browse';
+        }
+
+        function switchTab(endpoint, tab) {
+            // Hide all tab contents
+            document.querySelectorAll(`#${endpoint} .tab-content`).forEach(el => el.classList.remove('active'));
+            document.querySelectorAll(`#${endpoint} .tab`).forEach(el => el.classList.remove('active'));
+            
+            // Show selected tab
+            document.getElementById(`${endpoint}-${tab}`).classList.add('active');
+            event.target.classList.add('active');
+            
+            currentTab = tab;
+        }
+
+        // Authentication
+        async function testAuth() {
+            const responseId = 'products-response';
+            const statusId = 'products-status';
+            
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/products/products/`);
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        // Products API
+        async function getProducts() {
+            const responseId = 'products-response';
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/products/products/`);
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        async function getProductDetail() {
+            const productId = document.getElementById('productId').value;
+            const responseId = 'products-response';
+            
+            if (!productId) {
+                showError(responseId, 'Please enter a product ID');
+                return;
+            }
+            
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/products/products/${productId}/`);
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        // Cart API
+        async function getCart() {
+            const responseId = 'cart-response';
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/orders/cart/`);
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        async function addToCart() {
+            const productId = document.getElementById('addProductId').value;
+            const quantity = document.getElementById('addQuantity').value;
+            const variantId = document.getElementById('addVariantId').value;
+            const sizeId = document.getElementById('addSizeId').value;
+            const responseId = 'cart-response';
+            
+            if (!productId || !quantity) {
+                showError(responseId, 'Product ID and quantity are required');
+                return;
+            }
+            
+            const payload = {
+                product_id: parseInt(productId),
+                quantity: parseInt(quantity)
+            };
+            
+            if (variantId) payload.variant_id = parseInt(variantId);
+            if (sizeId) payload.size_id = parseInt(sizeId);
+            
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/orders/cart/add/`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        async function updateCartItem() {
+            const itemId = document.getElementById('updateItemId').value;
+            const quantity = document.getElementById('updateQuantity').value;
+            const responseId = 'cart-response';
+            
+            if (!itemId || !quantity) {
+                showError(responseId, 'Item ID and quantity are required');
+                return;
+            }
+            
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/orders/cart/update/${itemId}/`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ quantity: parseInt(quantity) })
+                });
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        async function removeFromCart() {
+            const itemId = document.getElementById('removeItemId').value;
+            const responseId = 'cart-response';
+            
+            if (!itemId) {
+                showError(responseId, 'Item ID is required');
+                return;
+            }
+            
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/orders/cart/remove/${itemId}/`, {
+                    method: 'DELETE'
+                });
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        async function clearCart() {
+            const responseId = 'cart-response';
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/orders/cart/clear/`, {
+                    method: 'DELETE'
+                });
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        // Addresses API
+        async function getAddresses() {
+            const responseId = 'addresses-response';
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/orders/shipping-addresses/`);
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        async function createAddress() {
+            const addressLine1 = document.getElementById('addressLine1').value;
+            const addressLine2 = document.getElementById('addressLine2').value;
+            const city = document.getElementById('city').value;
+            const state = document.getElementById('state').value;
+            const postalCode = document.getElementById('postalCode').value;
+            const country = document.getElementById('country').value;
+            const isDefault = document.getElementById('isDefault').checked;
+            const responseId = 'addresses-response';
+            
+            if (!addressLine1 || !city || !state || !postalCode || !country) {
+                showError(responseId, 'Please fill in all required fields');
+                return;
+            }
+            
+            const payload = {
+                address_line_1: addressLine1,
+                address_line_2: addressLine2,
+                city: city,
+                state: state,
+                postal_code: postalCode,
+                country: country,
+                is_default: isDefault
+            };
+            
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/orders/shipping-addresses/`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        // Checkout API
+        async function processCheckout() {
+            const email = document.getElementById('checkoutEmail').value;
+            const phone = document.getElementById('checkoutPhone').value;
+            const address1 = document.getElementById('shippingAddress1').value;
+            const address2 = document.getElementById('shippingAddress2').value;
+            const city = document.getElementById('shippingCity').value;
+            const state = document.getElementById('shippingState').value;
+            const postal = document.getElementById('shippingPostal').value;
+            const country = document.getElementById('shippingCountry').value;
+            const notes = document.getElementById('checkoutNotes').value;
+            const responseId = 'checkout-response';
+            
+            if (!email || !phone || !address1 || !city || !state || !postal || !country) {
+                showError(responseId, 'Please fill in all required fields');
+                return;
+            }
+            
+            const payload = {
+                email: email,
+                phone_number: phone,
+                shipping_address: {
+                    address_line_1: address1,
+                    address_line_2: address2,
+                    city: city,
+                    state: state,
+                    postal_code: postal,
+                    country: country
+                },
+                notes: notes
+            };
+            
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/orders/checkout/`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        // Orders API
+        async function getOrders() {
+            const responseId = 'orders-response';
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/orders/orders/`);
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        async function getOrderDetail() {
+            const orderId = document.getElementById('orderId').value;
+            const responseId = 'orders-response';
+            
+            if (!orderId) {
+                showError(responseId, 'Please enter an order ID');
+                return;
+            }
+            
+            showLoading(responseId);
+            
+            try {
+                const data = await makeRequest(`${getBaseUrl()}/api/orders/orders/${orderId}/`);
+                showResponse(responseId, data);
+            } catch (error) {
+                showError(responseId, error);
+            }
+        }
+
+        // Authentication functions
+        function switchAuthTab(tab) {
+            // Hide all auth forms
+            document.querySelectorAll('.auth-form').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.auth-tab').forEach(el => el.classList.remove('active'));
+            
+            // Show selected form
+            document.getElementById(`${tab}-form`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function updateAuthStatus(status, message) {
+            const statusDot = document.querySelector('#authStatus .status-dot');
+            const statusText = document.querySelector('#authStatus .status-text');
+            
+            statusDot.className = 'status-dot';
+            statusText.textContent = message;
+            
+            if (status === 'authenticated') {
+                statusDot.classList.add('authenticated');
+            } else if (status === 'error') {
+                statusDot.classList.add('error');
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                updateAuthStatus('error', 'Please fill in all fields');
+                return;
+            }
+            
+            updateAuthStatus('loading', 'Logging in...');
+            
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/token/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Store tokens
+                    localStorage.setItem('access_token', data.access);
+                    localStorage.setItem('refresh_token', data.refresh);
+                    
+                    // Update token input
+                    document.getElementById('jwtToken').value = data.access;
+                    
+                    updateAuthStatus('authenticated', `Logged in as ${email}`);
+                    
+                    // Switch to token tab
+                    switchAuthTab('token');
+                } else {
+                    updateAuthStatus('error', data.detail || 'Login failed');
+                }
+            } catch (error) {
+                updateAuthStatus('error', 'Network error: ' + error.message);
+            }
+        }
+
+        async function register() {
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+            const firstName = document.getElementById('registerFirstName').value;
+            const lastName = document.getElementById('registerLastName').value;
+            
+            if (!email || !password || !confirmPassword || !firstName || !lastName) {
+                updateAuthStatus('error', 'Please fill in all fields');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                updateAuthStatus('error', 'Passwords do not match');
+                return;
+            }
+            
+            updateAuthStatus('loading', 'Registering...');
+            
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/accounts/register/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        first_name: firstName,
+                        last_name: lastName
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateAuthStatus('authenticated', 'Registration successful! Please login.');
+                    
+                    // Clear form
+                    document.getElementById('registerEmail').value = '';
+                    document.getElementById('registerPassword').value = '';
+                    document.getElementById('registerConfirmPassword').value = '';
+                    document.getElementById('registerFirstName').value = '';
+                    document.getElementById('registerLastName').value = '';
+                    
+                    // Switch to login tab
+                    switchAuthTab('login');
+                } else {
+                    updateAuthStatus('error', data.message || 'Registration failed');
+                }
+            } catch (error) {
+                updateAuthStatus('error', 'Network error: ' + error.message);
+            }
+        }
+
+        async function forgotPassword() {
+            const email = document.getElementById('loginEmail').value;
+            
+            if (!email) {
+                updateAuthStatus('error', 'Please enter your email address');
+                return;
+            }
+            
+            updateAuthStatus('loading', 'Sending reset email...');
+            
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/accounts/forgot-password/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateAuthStatus('authenticated', 'Password reset email sent!');
+                } else {
+                    updateAuthStatus('error', data.message || 'Failed to send reset email');
+                }
+            } catch (error) {
+                updateAuthStatus('error', 'Network error: ' + error.message);
+            }
+        }
+
+        async function refreshToken() {
+            const refreshToken = localStorage.getItem('refresh_token');
+            
+            if (!refreshToken) {
+                updateAuthStatus('error', 'No refresh token available');
+                return;
+            }
+            
+            updateAuthStatus('loading', 'Refreshing token...');
+            
+            try {
+                const response = await fetch(`${getBaseUrl()}/api/token/refresh/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        refresh: refreshToken
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Update tokens
+                    localStorage.setItem('access_token', data.access);
+                    document.getElementById('jwtToken').value = data.access;
+                    
+                    updateAuthStatus('authenticated', 'Token refreshed successfully');
+                } else {
+                    updateAuthStatus('error', 'Token refresh failed');
+                    clearToken();
+                }
+            } catch (error) {
+                updateAuthStatus('error', 'Network error: ' + error.message);
+            }
+        }
+
+        function clearToken() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            document.getElementById('jwtToken').value = '';
+            updateAuthStatus('error', 'Token cleared');
+        }
+
+        // Override getAuthHeaders to use stored token
+        function getAuthHeaders() {
+            const token = localStorage.getItem('access_token') || document.getElementById('jwtToken').value;
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        // Initialize the interface
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default values
+            document.getElementById('checkoutEmail').value = 'customer@example.com';
+            document.getElementById('checkoutPhone').value = '+1234567890';
+            document.getElementById('shippingAddress1').value = '123 Main Street';
+            document.getElementById('shippingCity').value = 'New York';
+            document.getElementById('shippingState').value = 'NY';
+            document.getElementById('shippingPostal').value = '10001';
+            document.getElementById('shippingCountry').value = 'United States';
+            
+            // Check for stored token
+            const storedToken = localStorage.getItem('access_token');
+            if (storedToken) {
+                document.getElementById('jwtToken').value = storedToken;
+                updateAuthStatus('authenticated', 'Token loaded from storage');
+            }
+        });
+    </script>
+</body>
+</html>

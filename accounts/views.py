@@ -29,6 +29,21 @@ from .serializers import (
 
 # Create your views here.
 
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def test_view(request):
+    """
+    Simple test view to verify the server is working
+    """
+    print("[DEBUG] Test view called!")
+    return Response({
+        'success': True,
+        'message': 'Test endpoint working!',
+        'timestamp': timezone.now().isoformat()
+    })
+
+# Create your views here.
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserRegistrationSerializer
@@ -69,6 +84,8 @@ class AdminUserListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return User.objects.none()
         if not self.request.user.is_admin:
             return User.objects.none()
         
@@ -101,6 +118,8 @@ class AdminUserDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return User.objects.none()
         if not self.request.user.is_admin:
             return User.objects.none()
         return User.objects.all()
@@ -116,6 +135,8 @@ class UserListView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return User.objects.none()
         if not self.request.user.is_admin:
             return User.objects.none()
         
@@ -166,6 +187,8 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return User.objects.none()
         if not self.request.user.is_admin:
             return User.objects.none()
         return User.objects.all()
@@ -394,18 +417,29 @@ def forgot_password_view(request):
     """
     Handle forgot password request
     """
+    print("=" * 50)
+    print("[DEBUG] FORGOT PASSWORD VIEW CALLED!")
+    print(f"[DEBUG] Request method: {request.method}")
+    print(f"[DEBUG] Request data: {request.data}")
+    print(f"[DEBUG] Request headers: {dict(request.headers)}")
+    print("=" * 50)
+    
     serializer = ForgotPasswordSerializer(data=request.data)
     if serializer.is_valid():
         email = serializer.validated_data['email']
+        print(f"[DEBUG] Email validated: {email}")
         
         try:
             user = User.objects.get(email=email, is_active=True)
+            print(f"[DEBUG] User found: {user.email} (ID: {user.id})")
             
             # Create password reset token
             reset_token = PasswordResetToken.objects.create(user=user)
+            print(f"[DEBUG] Reset token created: {reset_token.token}")
             
             # Generate reset URL
             reset_url = f"http://localhost:8080/reset-password?token={reset_token.token}"
+            print(f"[DEBUG] Reset URL generated: {reset_url}")
             
             # Email content
             subject = "Password Reset Request - Holister Admin"
@@ -455,8 +489,12 @@ def forgot_password_view(request):
             plain_message = strip_tags(html_message)
             
             # Send email
+            print(f"[DEBUG] Attempting to send email to: {email}")
+            print(f"[DEBUG] From email: {settings.DEFAULT_FROM_EMAIL}")
+            print(f"[DEBUG] Subject: {subject}")
+            
             try:
-                send_mail(
+                result = send_mail(
                     subject=subject,
                     message=plain_message,
                     from_email=settings.DEFAULT_FROM_EMAIL,
@@ -465,27 +503,34 @@ def forgot_password_view(request):
                     fail_silently=False,
                 )
                 
+                print(f"[DEBUG] Email sent successfully! Result: {result}")
+                
                 return Response({
                     'success': True,
                     'message': 'Password reset email has been sent. Please check your email inbox.'
                 }, status=status.HTTP_200_OK)
                 
             except Exception as e:
+                print(f"[DEBUG] Email sending failed with error: {str(e)}")
+                print(f"[DEBUG] Error type: {type(e).__name__}")
                 return Response({
                     'success': False,
                     'message': 'Failed to send email. Please try again later.'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
         except User.DoesNotExist:
+            print(f"[DEBUG] User not found for email: {email}")
             # Don't reveal if email exists or not for security
             pass
         
         # Always return success to prevent email enumeration
+        print(f"[DEBUG] Returning success response (email enumeration protection)")
         return Response({
             'success': True,
             'message': 'If an account with that email exists, a password reset link has been sent.'
         }, status=status.HTTP_200_OK)
     
+    print(f"[DEBUG] Serializer validation failed: {serializer.errors}")
     return Response({
         'success': False,
         'message': 'Invalid email format.',
@@ -498,19 +543,26 @@ def reset_password_view(request):
     """
     Handle password reset with token
     """
+    print(f"[DEBUG] Reset password request received: {request.data}")
+    
     serializer = ResetPasswordSerializer(data=request.data)
     if serializer.is_valid():
         reset_token = serializer.validated_data['reset_token']
         password = serializer.validated_data['password']
+        
+        print(f"[DEBUG] Token validated: {reset_token.token}")
+        print(f"[DEBUG] User: {reset_token.user.email}")
         
         try:
             # Update user password
             user = reset_token.user
             user.set_password(password)
             user.save()
+            print(f"[DEBUG] Password updated for user: {user.email}")
             
             # Mark token as used
             reset_token.mark_as_used()
+            print(f"[DEBUG] Token marked as used")
             
             return Response({
                 'success': True,
@@ -518,11 +570,13 @@ def reset_password_view(request):
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
+            print(f"[DEBUG] Password reset failed with error: {str(e)}")
             return Response({
                 'success': False,
                 'message': 'Failed to reset password. Please try again.'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    print(f"[DEBUG] Reset password serializer validation failed: {serializer.errors}")
     return Response({
         'success': False,
         'message': 'Invalid request data.',

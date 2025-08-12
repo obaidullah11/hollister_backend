@@ -194,3 +194,10 @@ class ProductVariantUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'name', 'color', 'stock', 'variant_icon', 'variant_picture'
         ]
+
+class ProductImageSerializer(serializers.Serializer):
+    """
+    Simple serializer for product image uploads
+    """
+    image = serializers.ImageField()
+    caption = serializers.CharField(required=False, allow_blank=True)

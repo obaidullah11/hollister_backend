@@ -7,7 +7,7 @@ from .models import Product, ProductVariant, ProductSize
 from .serializers import (
     ProductSerializer, ProductCreateSerializer, ProductUpdateSerializer,
     ProductVariantSerializer, ProductVariantCreateSerializer, ProductVariantUpdateSerializer,
-    EnhancedProductCreateSerializer
+    EnhancedProductCreateSerializer, ProductImageSerializer
 )
 
 # Product Views
@@ -21,6 +21,8 @@ class ProductListView(generics.ListCreateAPIView):
     ordering = ['-created_at']
     
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Product.objects.none()
         return Product.objects.prefetch_related(
             'variants', 'variants__sizes'
         )
@@ -532,6 +534,8 @@ class ProductVariantListView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return ProductVariant.objects.none()
         product_id = self.kwargs.get('product_id')
         return ProductVariant.objects.filter(product_id=product_id).prefetch_related('sizes')
     
@@ -580,6 +584,7 @@ class ProductVariantDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 # Product Image Views
 class ProductImageCreateView(generics.CreateAPIView):
+    serializer_class = ProductImageSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def create(self, request, *args, **kwargs):
@@ -611,6 +616,8 @@ class AdminProductListView(generics.ListAPIView):
     ordering = ['-created_at']
     
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Product.objects.none()
         return Product.objects.prefetch_related(
             'variants', 'variants__sizes'
         )

@@ -56,6 +56,19 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'phone_number', 'address', 'profile_picture']
+    
+    def validate_profile_picture(self, value):
+        if value:
+            # Check file size (max 5MB)
+            if value.size > 5 * 1024 * 1024:
+                raise serializers.ValidationError("Image file size must be less than 5MB.")
+            
+            # Check file type
+            allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+            if value.content_type not in allowed_types:
+                raise serializers.ValidationError("Only JPEG, PNG, and GIF images are allowed.")
+        
+        return value
 
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
