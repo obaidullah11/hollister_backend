@@ -644,7 +644,16 @@ class EnhancedOrderDetailView(generics.RetrieveAPIView):
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Order.objects.none()
-        return Order.objects.select_related('customer', 'shipping_address', 'billing_address', 'status_history').prefetch_related('items')
+        return Order.objects.select_related(
+            'customer', 
+            'shipping_address', 
+            'billing_address'
+        ).prefetch_related(
+            'items__product',
+            'items__variant', 
+            'items__size',
+            'status_history'
+        )
     
     @swagger_auto_schema(
         tags=['Orders'],
@@ -659,9 +668,19 @@ class EnhancedOrderDetailView(generics.RetrieveAPIView):
         }
     )
     def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
+        response = super().get(request, *args, **kwargs)
+        
+        # Return data in the expected format
+        return Response({
+            'success': True,
+            'message': 'Order details retrieved successfully',
+            'data': response.data
+        })
 
 class ShippingAddressListView(generics.ListCreateAPIView):
+    """
+    List and create shipping addresses
+    """
     serializer_class = ShippingAddressSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -672,8 +691,41 @@ class ShippingAddressListView(generics.ListCreateAPIView):
     
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+    
+    @swagger_auto_schema(
+        tags=['Shopping Flow'],
+        operation_description="List all shipping addresses for the current user",
+        responses={
+            200: openapi.Response(
+                description="Shipping addresses retrieved successfully",
+                schema=ShippingAddressSerializer(many=True)
+            ),
+            401: "Authentication required"
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+    
+    @swagger_auto_schema(
+        tags=['Shopping Flow'],
+        operation_description="Create a new shipping address for the current user",
+        request_body=ShippingAddressSerializer,
+        responses={
+            201: openapi.Response(
+                description="Shipping address created successfully",
+                schema=ShippingAddressSerializer
+            ),
+            400: "Invalid data",
+            401: "Authentication required"
+        }
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
 
 class ShippingAddressDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Get, update, and delete shipping address
+    """
     serializer_class = ShippingAddressSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -681,6 +733,67 @@ class ShippingAddressDetailView(generics.RetrieveUpdateDestroyAPIView):
         if getattr(self, 'swagger_fake_view', False):
             return ShippingAddress.objects.none()
         return ShippingAddress.objects.filter(user=self.request.user)
+    
+    @swagger_auto_schema(
+        tags=['Shopping Flow'],
+        operation_description="Get a specific shipping address",
+        responses={
+            200: openapi.Response(
+                description="Shipping address retrieved successfully",
+                schema=ShippingAddressSerializer
+            ),
+            401: "Authentication required",
+            404: "Shipping address not found"
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+    
+    @swagger_auto_schema(
+        tags=['Shopping Flow'],
+        operation_description="Update a shipping address",
+        request_body=ShippingAddressSerializer,
+        responses={
+            200: openapi.Response(
+                description="Shipping address updated successfully",
+                schema=ShippingAddressSerializer
+            ),
+            400: "Invalid data",
+            401: "Authentication required",
+            404: "Shipping address not found"
+        }
+    )
+    def put(self, request, *args, **kwargs):
+        return super().put(request, *args, **kwargs)
+    
+    @swagger_auto_schema(
+        tags=['Shopping Flow'],
+        operation_description="Partially update a shipping address",
+        request_body=ShippingAddressSerializer,
+        responses={
+            200: openapi.Response(
+                description="Shipping address updated successfully",
+                schema=ShippingAddressSerializer
+            ),
+            400: "Invalid data",
+            401: "Authentication required",
+            404: "Shipping address not found"
+        }
+    )
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
+    
+    @swagger_auto_schema(
+        tags=['Shopping Flow'],
+        operation_description="Delete a shipping address",
+        responses={
+            204: "Shipping address deleted successfully",
+            401: "Authentication required",
+            404: "Shipping address not found"
+        }
+    )
+    def delete(self, request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
@@ -781,118 +894,3 @@ def recent_orders(request):
     serializer = AdminOrderSerializer(recent_orders, many=True)
     
     return Response(serializer.data)
-
-class ShippingAddressListView(generics.ListCreateAPIView):
-    """
-    List and create shipping addresses
-    """
-    serializer_class = ShippingAddressSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        return ShippingAddress.objects.filter(user=self.request.user)
-    
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-    
-    @swagger_auto_schema(
-        tags=['Shopping Flow'],
-        operation_description="List all shipping addresses for the current user",
-        responses={
-            200: openapi.Response(
-                description="Shipping addresses retrieved successfully",
-                schema=ShippingAddressSerializer(many=True)
-            ),
-            401: "Authentication required"
-        }
-    )
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-    
-    @swagger_auto_schema(
-        tags=['Shopping Flow'],
-        operation_description="Create a new shipping address for the current user",
-        request_body=ShippingAddressSerializer,
-        responses={
-            201: openapi.Response(
-                description="Shipping address created successfully",
-                schema=ShippingAddressSerializer
-            ),
-            400: "Invalid data",
-            401: "Authentication required"
-        }
-    )
-    def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
-
-class ShippingAddressDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    Get, update, and delete shipping address
-    """
-    serializer_class = ShippingAddressSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = ShippingAddress.objects.all()
-    
-    def get_queryset(self):
-        return ShippingAddress.objects.filter(user=self.request.user)
-    
-    @swagger_auto_schema(
-        tags=['Shopping Flow'],
-        operation_description="Get a specific shipping address",
-        responses={
-            200: openapi.Response(
-                description="Shipping address retrieved successfully",
-                schema=ShippingAddressSerializer
-            ),
-            401: "Authentication required",
-            404: "Shipping address not found"
-        }
-    )
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-    
-    @swagger_auto_schema(
-        tags=['Shopping Flow'],
-        operation_description="Update a shipping address",
-        request_body=ShippingAddressSerializer,
-        responses={
-            200: openapi.Response(
-                description="Shipping address updated successfully",
-                schema=ShippingAddressSerializer
-            ),
-            400: "Invalid data",
-            401: "Authentication required",
-            404: "Shipping address not found"
-        }
-    )
-    def put(self, request, *args, **kwargs):
-        return super().put(request, *args, **kwargs)
-    
-    @swagger_auto_schema(
-        tags=['Shopping Flow'],
-        operation_description="Partially update a shipping address",
-        request_body=ShippingAddressSerializer,
-        responses={
-            200: openapi.Response(
-                description="Shipping address updated successfully",
-                schema=ShippingAddressSerializer
-            ),
-            400: "Invalid data",
-            401: "Authentication required",
-            404: "Shipping address not found"
-        }
-    )
-    def patch(self, request, *args, **kwargs):
-        return super().patch(request, *args, **kwargs)
-    
-    @swagger_auto_schema(
-        tags=['Shopping Flow'],
-        operation_description="Delete a shipping address",
-        responses={
-            204: "Shipping address deleted successfully",
-            401: "Authentication required",
-            404: "Shipping address not found"
-        }
-    )
-    def delete(self, request, *args, **kwargs):
-        return super().delete(request, *args, **kwargs)

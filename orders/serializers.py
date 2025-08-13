@@ -4,38 +4,31 @@ from products.models import Product, ProductVariant, ProductSize
 from accounts.serializers import UserProfileSerializer
 
 class ProductSerializer(serializers.ModelSerializer):
-    category_name = serializers.CharField(source='category.name', read_only=True)
-    brand_name = serializers.CharField(source='brand.name', read_only=True)
-    
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'sku', 'description', 'selling_price', 'original_price', 
-            'category', 'category_name', 'brand', 'brand_name', 'is_active', 
-            'created_at', 'updated_at'
+            'id', 'name', 'sku', 'description', 'selling_price', 'purchasing_price', 
+            'category', 'gender', 'material_and_care', 'created_at', 'updated_at'
         ]
 
 class ProductVariantSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVariant
-        fields = ['id', 'name', 'color', 'image_url']
+        fields = ['id', 'name', 'color', 'stock', 'variant_icon', 'variant_picture']
 
 class ProductSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductSize
-        fields = ['id', 'size', 'stock', 'is_active']
+        fields = ['id', 'size', 'stock']
 
 class EnhancedProductSerializer(serializers.ModelSerializer):
-    category_name = serializers.CharField(source='category.name', read_only=True)
-    brand_name = serializers.CharField(source='brand.name', read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
     
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'sku', 'description', 'selling_price', 'original_price', 
-            'category', 'category_name', 'brand', 'brand_name', 'is_active', 
-            'variants', 'created_at', 'updated_at'
+            'id', 'name', 'sku', 'description', 'selling_price', 'purchasing_price', 
+            'category', 'gender', 'material_and_care', 'variants', 'created_at', 'updated_at'
         ]
 
 class CartItemSerializer(serializers.ModelSerializer):
@@ -186,8 +179,7 @@ class EnhancedOrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = [
-            'id', 'product', 'variant', 'size', 'quantity', 'unit_price', 'total_price',
-            'created_at'
+            'id', 'product', 'variant', 'size', 'quantity', 'unit_price', 'total_price'
         ]
 
 class OrderStatusHistorySerializer(serializers.ModelSerializer):
