@@ -195,15 +195,30 @@ SIMPLE_JWT = {
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
+    # Development origins
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "http://localhost:4173",  # Vite preview port
+    "http://127.0.0.1:4173",  # Vite preview port
+    
+    # Production origins (add your actual frontend domains here)
+    "https://holister-admin.vercel.app",
+    "https://holister-shopping-test.vercel.app",
+    "https://holister-admin.netlify.app",
+    "https://holister-shopping-test.netlify.app",
+    
+    # For testing - allow all origins in development (remove in production)
+    # "https://*",  # Uncomment for testing, remove for production
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# For testing purposes - allow all origins (remove in production)
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
 
 CORS_ALLOW_METHODS = [
     'DELETE',

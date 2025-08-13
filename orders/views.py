@@ -12,7 +12,8 @@ from .serializers import (
     OrderSerializer, OrderCreateSerializer, OrderUpdateSerializer, 
     OrderStatusUpdateSerializer, OrderItemCreateSerializer, 
     AdminOrderSerializer, CustomerOrderSerializer, ShippingAddressSerializer,
-    CartSerializer, CartItemSerializer, AddToCartSerializer, UpdateCartItemSerializer, CheckoutSerializer
+    CartSerializer, CartItemSerializer, AddToCartSerializer, UpdateCartItemSerializer, CheckoutSerializer,
+    EnhancedOrderDetailSerializer
 )
 
 # Cart Views
@@ -466,6 +467,12 @@ class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
             return Order.objects.filter(customer=self.request.user).select_related('customer').prefetch_related('items', 'status_history')
 
 class OrderStatusUpdateView(generics.UpdateAPIView):
+    """
+    Update order status
+    
+    Update the status of an order. Only admins can update any order,
+    while customers can only update their own orders.
+    """
     serializer_class = OrderStatusUpdateSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -476,6 +483,83 @@ class OrderStatusUpdateView(generics.UpdateAPIView):
             return Order.objects.all()
         else:
             return Order.objects.filter(customer=self.request.user)
+    
+    @swagger_auto_schema(
+        tags=['Orders'],
+        operation_description="Update the status of an order",
+        request_body=OrderStatusUpdateSerializer,
+        responses={
+            200: openapi.Response(
+                description="Order status updated successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'data': openapi.Schema(type=openapi.TYPE_OBJECT)
+                    }
+                )
+            ),
+            400: "Invalid data or validation error",
+            401: "Authentication required",
+            404: "Order not found"
+        }
+    )
+    def put(self, request, *args, **kwargs):
+        return super().put(request, *args, **kwargs)
+    
+    @swagger_auto_schema(
+        tags=['Orders'],
+        operation_description="Partially update the status of an order",
+        request_body=OrderStatusUpdateSerializer,
+        responses={
+            200: openapi.Response(
+                description="Order status updated successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'data': openapi.Schema(type=openapi.TYPE_OBJECT)
+                    }
+                )
+            ),
+            400: "Invalid data or validation error",
+            401: "Authentication required",
+            404: "Order not found"
+        }
+    )
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        order = self.get_object()
+        serializer = self.get_serializer(order, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            old_status = order.status
+            order = serializer.save()
+            
+            # Create status history if status changed
+            if old_status != order.status:
+                OrderStatusHistory.objects.create(
+                    order=order,
+                    status=order.status,
+                    notes=f'Status updated to {order.status}',
+                    created_by=request.user
+                )
+            
+            return Response({
+                'success': True,
+                'message': 'Order status updated successfully',
+                'data': serializer.data
+            })
+        
+        return Response({
+            'success': False,
+            'message': 'Failed to update order status',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 class CustomerOrderListView(generics.ListAPIView):
     serializer_class = CustomerOrderSerializer
@@ -549,6 +633,33 @@ class AdminOrderDetailView(generics.RetrieveUpdateAPIView):
             'message': 'Failed to update order',
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
+class EnhancedOrderDetailView(generics.RetrieveAPIView):
+    """
+    Get detailed order information including items and status history.
+    """
+    serializer_class = EnhancedOrderDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Order.objects.none()
+        return Order.objects.select_related('customer', 'shipping_address', 'billing_address', 'status_history').prefetch_related('items')
+    
+    @swagger_auto_schema(
+        tags=['Orders'],
+        operation_description="Get detailed order information",
+        responses={
+            200: openapi.Response(
+                description="Order details retrieved successfully",
+                schema=EnhancedOrderDetailSerializer
+            ),
+            401: "Authentication required",
+            404: "Order not found"
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
 class ShippingAddressListView(generics.ListCreateAPIView):
     serializer_class = ShippingAddressSerializer

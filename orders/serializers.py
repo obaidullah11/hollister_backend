@@ -4,19 +4,39 @@ from products.models import Product, ProductVariant, ProductSize
 from accounts.serializers import UserProfileSerializer
 
 class ProductSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    brand_name = serializers.CharField(source='brand.name', read_only=True)
+    
     class Meta:
         model = Product
-        fields = ['id', 'name', 'sku', 'selling_price', 'category']
+        fields = [
+            'id', 'name', 'sku', 'description', 'selling_price', 'original_price', 
+            'category', 'category_name', 'brand', 'brand_name', 'is_active', 
+            'created_at', 'updated_at'
+        ]
 
 class ProductVariantSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVariant
-        fields = ['id', 'name', 'color']
+        fields = ['id', 'name', 'color', 'image_url']
 
 class ProductSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductSize
-        fields = ['id', 'size', 'stock']
+        fields = ['id', 'size', 'stock', 'is_active']
+
+class EnhancedProductSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    brand_name = serializers.CharField(source='brand.name', read_only=True)
+    variants = ProductVariantSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'name', 'sku', 'description', 'selling_price', 'original_price', 
+            'category', 'category_name', 'brand', 'brand_name', 'is_active', 
+            'variants', 'created_at', 'updated_at'
+        ]
 
 class CartItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
@@ -158,6 +178,18 @@ class OrderItemSerializer(serializers.ModelSerializer):
         model = OrderItem
         fields = ['id', 'product', 'variant', 'size', 'quantity', 'unit_price', 'total_price']
 
+class EnhancedOrderItemSerializer(serializers.ModelSerializer):
+    product = EnhancedProductSerializer(read_only=True)
+    variant = ProductVariantSerializer(read_only=True)
+    size = ProductSizeSerializer(read_only=True)
+    
+    class Meta:
+        model = OrderItem
+        fields = [
+            'id', 'product', 'variant', 'size', 'quantity', 'unit_price', 'total_price',
+            'created_at'
+        ]
+
 class OrderStatusHistorySerializer(serializers.ModelSerializer):
     created_by = serializers.StringRelatedField()
     
@@ -165,6 +197,24 @@ class OrderStatusHistorySerializer(serializers.ModelSerializer):
         model = OrderStatusHistory
         fields = ['id', 'status', 'notes', 'created_by', 'created_at']
         read_only_fields = ['created_at']
+
+class EnhancedOrderDetailSerializer(serializers.ModelSerializer):
+    items = EnhancedOrderItemSerializer(many=True, read_only=True)
+    shipping_address = ShippingAddressSerializer(read_only=True)
+    billing_address = ShippingAddressSerializer(read_only=True)
+    customer = UserProfileSerializer(read_only=True)
+    status_history = OrderStatusHistorySerializer(many=True, read_only=True)
+    item_count = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'order_number', 'status', 'payment_status', 'total_amount', 
+            'email', 'phone_number', 'shipping_address', 'billing_address', 
+            'notes', 'items', 'item_count', 'customer', 'status_history',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['order_number', 'created_at', 'updated_at']
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)

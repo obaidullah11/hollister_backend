@@ -15,10 +15,19 @@ urlpatterns = [
     # Order endpoints
     path('orders/', views.OrderListView.as_view(), name='order-list'),
     path('orders/<int:pk>/', views.OrderDetailView.as_view(), name='order-detail'),
+    path('orders/<int:pk>/status/', views.OrderStatusUpdateView.as_view(), name='order-status-update'),
+    path('orders/<int:pk>/detail/', views.EnhancedOrderDetailView.as_view(), name='enhanced-order-detail'),
+    
+    # Customer order endpoints
+    path('customer/orders/', views.CustomerOrderListView.as_view(), name='customer-order-list'),
+    path('customer/order-stats/', views.customer_order_stats, name='customer-order-stats'),
     
     # Admin order endpoints
     path('admin/orders/', views.AdminOrderListView.as_view(), name='admin-order-list'),
     path('admin/orders/<int:pk>/', views.AdminOrderDetailView.as_view(), name='admin-order-detail'),
+    path('admin/order-stats/', views.order_stats, name='admin-order-stats'),
+    path('admin/bulk-update-status/', views.bulk_update_order_status, name='bulk-update-order-status'),
+    path('admin/recent-orders/', views.recent_orders, name='recent-orders'),
     
     # Shipping address endpoints
     path('shipping-addresses/', views.ShippingAddressListView.as_view(), name='shipping-address-list'),
