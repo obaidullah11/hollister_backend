@@ -10,6 +10,7 @@ urlpatterns = [
     
     # Product variants
     path('products/<int:product_id>/variants/', views.ProductVariantCreateView.as_view(), name='variant-create'),
+    path('products/<int:product_id>/variants/<int:pk>/', views.ProductVariantDetailView.as_view(), name='variant-detail'),
     path('products/<int:product_id>/images/', views.ProductImageCreateView.as_view(), name='image-create'),
     
     # Debug endpoint

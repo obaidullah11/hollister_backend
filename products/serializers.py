@@ -171,6 +171,8 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
 
 class ProductVariantCreateSerializer(serializers.ModelSerializer):
     sizes = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
+    variant_icon = serializers.CharField(required=False, allow_blank=True)
+    variant_picture = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = ProductVariant
@@ -180,20 +182,124 @@ class ProductVariantCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         sizes_data = validated_data.pop('sizes', [])
+        variant_icon_data = validated_data.pop('variant_icon', None)
+        variant_picture_data = validated_data.pop('variant_picture', None)
+        
+        # Create variant without images first
         variant = super().create(validated_data)
+        
+        # Handle variant_icon
+        if variant_icon_data and variant_icon_data.startswith('data:image'):
+            # Convert base64 to file and save
+            import base64
+            from django.core.files.base import ContentFile
+            
+            try:
+                # Extract the base64 data
+                format, imgstr = variant_icon_data.split(';base64,')
+                ext = format.split('/')[-1]
+                
+                # Create file name
+                filename = f"variant_icon_{variant.id}_{variant.name}.{ext}"
+                
+                # Convert to file and save
+                data = ContentFile(base64.b64decode(imgstr))
+                variant.variant_icon.save(filename, data, save=False)
+            except Exception as e:
+                # If base64 conversion fails, ignore the image
+                pass
+        
+        # Handle variant_picture
+        if variant_picture_data and variant_picture_data.startswith('data:image'):
+            # Convert base64 to file and save
+            import base64
+            from django.core.files.base import ContentFile
+            
+            try:
+                # Extract the base64 data
+                format, imgstr = variant_picture_data.split(';base64,')
+                ext = format.split('/')[-1]
+                
+                # Create file name
+                filename = f"variant_picture_{variant.id}_{variant.name}.{ext}"
+                
+                # Convert to file and save
+                data = ContentFile(base64.b64decode(imgstr))
+                variant.variant_picture.save(filename, data, save=False)
+            except Exception as e:
+                # If base64 conversion fails, ignore the image
+                pass
         
         # Create sizes
         for size in sizes_data:
             ProductSize.objects.create(variant=variant, size=size, stock=variant.stock)
         
+        variant.save()
         return variant
 
 class ProductVariantUpdateSerializer(serializers.ModelSerializer):
+    variant_icon = serializers.CharField(required=False, allow_blank=True)
+    variant_picture = serializers.CharField(required=False, allow_blank=True)
+    
     class Meta:
         model = ProductVariant
         fields = [
             'name', 'color', 'stock', 'variant_icon', 'variant_picture'
         ]
+    
+    def update(self, instance, validated_data):
+        # Handle base64 image data
+        variant_icon_data = validated_data.pop('variant_icon', None)
+        variant_picture_data = validated_data.pop('variant_picture', None)
+        
+        # Update other fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Handle variant_icon
+        if variant_icon_data and variant_icon_data.startswith('data:image'):
+            # Convert base64 to file and save
+            import base64
+            from django.core.files.base import ContentFile
+            
+            try:
+                # Extract the base64 data
+                format, imgstr = variant_icon_data.split(';base64,')
+                ext = format.split('/')[-1]
+                
+                # Create file name
+                filename = f"variant_icon_{instance.id}_{instance.name}.{ext}"
+                
+                # Convert to file and save
+                data = ContentFile(base64.b64decode(imgstr))
+                instance.variant_icon.save(filename, data, save=False)
+            except Exception as e:
+                # If base64 conversion fails, ignore the image
+                pass
+        
+        # Handle variant_picture
+        if variant_picture_data and variant_picture_data.startswith('data:image'):
+            # Convert base64 to file and save
+            import base64
+            from django.core.files.base import ContentFile
+            
+            try:
+                # Extract the base64 data
+                format, imgstr = variant_picture_data.split(';base64,')
+                ext = format.split('/')[-1]
+                
+                # Create file name
+                filename = f"variant_picture_{instance.id}_{instance.name}.{ext}"
+                
+                # Convert to file and save
+                data = ContentFile(base64.b64decode(imgstr))
+                instance.variant_picture.save(filename, data, save=False)
+            except Exception as e:
+                # If base64 conversion fails, ignore the image
+                pass
+        
+        instance.save()
+        return instance
 
 class ProductImageSerializer(serializers.Serializer):
     """

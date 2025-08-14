@@ -520,6 +520,25 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
             return ProductUpdateSerializer
         return ProductSerializer
     
+    def retrieve(self, request, *args, **kwargs):
+        """Override retrieve to return consistent response format"""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        
+        # Debug logging
+        print(f"🔍 ProductDetailView.retrieve - Product ID: {instance.id}")
+        print(f"🔍 ProductDetailView.retrieve - Product Name: {instance.name}")
+        print(f"🔍 ProductDetailView.retrieve - Variants count: {instance.variants.count()}")
+        
+        serialized_data = serializer.data
+        print(f"🔍 ProductDetailView.retrieve - Serialized variants: {serialized_data.get('variants', [])}")
+        
+        return Response({
+            'success': True,
+            'message': 'Product details retrieved successfully',
+            'data': serialized_data
+        })
+    
     def destroy(self, request, *args, **kwargs):
         product = self.get_object()
         product.delete()
