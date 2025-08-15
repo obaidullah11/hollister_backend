@@ -11,10 +11,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'password', 'confirm_password', 'role', 'phone_number', 'address']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'password', 'confirm_password', 'role', 'phone_number', 'address', 'holister_points']
         extra_kwargs = {
             'password': {'write_only': True},
-            'confirm_password': {'write_only': True}
+            'confirm_password': {'write_only': True},
+            'holister_points': {'read_only': True}
         }
     
     def validate(self, attrs):
@@ -49,8 +50,8 @@ class UserLoginSerializer(serializers.Serializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone_number', 'address', 'profile_picture', 'date_joined', 'last_login', 'is_active']
-        read_only_fields = ['id', 'date_joined', 'last_login']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone_number', 'address', 'profile_picture', 'holister_points', 'date_joined', 'last_login', 'is_active']
+        read_only_fields = ['id', 'date_joined', 'last_login', 'holister_points']
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -130,10 +131,11 @@ class UserCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'password', 'confirm_password', 'role', 'phone_number', 'address', 'is_active']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'password', 'confirm_password', 'role', 'phone_number', 'address', 'holister_points', 'is_active']
         extra_kwargs = {
             'password': {'write_only': True},
-            'confirm_password': {'write_only': True}
+            'confirm_password': {'write_only': True},
+            'holister_points': {'read_only': True}
         }
     
     def validate(self, attrs):
@@ -149,13 +151,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
 class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone_number', 'address', 'profile_picture', 'date_joined', 'last_login', 'is_active']
-        read_only_fields = ['id', 'date_joined', 'last_login']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone_number', 'address', 'profile_picture', 'holister_points', 'date_joined', 'last_login', 'is_active']
+        read_only_fields = ['id', 'date_joined', 'last_login', 'holister_points']
 
 class UserUpdateAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'email', 'first_name', 'last_name', 'role', 'phone_number', 'address', 'is_active']
+        fields = ['username', 'email', 'first_name', 'last_name', 'role', 'phone_number', 'address', 'holister_points', 'is_active']
         read_only_fields = ['id', 'date_joined', 'last_login']
 
 class UserStatusUpdateSerializer(serializers.Serializer):

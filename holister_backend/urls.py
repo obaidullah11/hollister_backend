@@ -54,6 +54,7 @@ urlpatterns = [
     path('api/products/', include('products.urls')),
     path('api/orders/', include('orders.urls')),
     path('api/settings/', include('settings.urls')),
+    path('api/banners/', include('banners.urls')),
     
     # Swagger Documentation
     path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
