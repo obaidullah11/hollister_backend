@@ -1,19 +1,19 @@
 from rest_framework import serializers
-from .models import StoreSettings
+from .models import StoreSettings, TermsAndConditions, PrivacyPolicy
 
-
-class StoreSettingsSerializer(serializers.ModelSerializer):
-    """Serializer for store settings"""
-    
+class SettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = StoreSettings
-        fields = ['currency', 'timezone', 'created_at', 'updated_at']
+        fields = ['id', 'currency', 'timezone', 'created_at', 'updated_at']
+
+class TermsAndConditionsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TermsAndConditions
+        fields = ['id', 'title', 'content', 'version', 'is_active', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
-
-class StoreSettingsUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating store settings"""
-    
+class PrivacyPolicySerializer(serializers.ModelSerializer):
     class Meta:
-        model = StoreSettings
-        fields = ['currency', 'timezone']
+        model = PrivacyPolicy
+        fields = ['id', 'title', 'content', 'version', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
