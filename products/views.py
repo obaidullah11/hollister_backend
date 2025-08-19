@@ -3,11 +3,14 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.db.models import Q, Count
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Product, ProductVariant, ProductSize
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from .models import Product, ProductVariant, ProductSize, Review, Category
 from .serializers import (
     ProductSerializer, ProductCreateSerializer, ProductUpdateSerializer,
     ProductVariantSerializer, ProductVariantCreateSerializer, ProductVariantUpdateSerializer,
-    EnhancedProductCreateSerializer, ProductImageSerializer
+    EnhancedProductCreateSerializer, ProductImageSerializer, ProductDetailSerializer,
+    ReviewSerializer, ReviewCreateSerializer, CategorySerializer
 )
 
 # Product Views
@@ -15,7 +18,7 @@ class ProductListView(generics.ListCreateAPIView):
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['category', 'gender']
+    filterset_fields = ['category', 'gender', 'is_active']
     search_fields = ['name', 'sku', 'description']
     ordering_fields = ['name', 'selling_price', 'created_at']
     ordering = ['-created_at']
@@ -23,9 +26,16 @@ class ProductListView(generics.ListCreateAPIView):
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Product.objects.none()
-        return Product.objects.prefetch_related(
+        
+        queryset = Product.objects.prefetch_related(
             'variants', 'variants__sizes'
         )
+        
+        # Filter by is_active for non-admin users
+        if not self.request.user.is_admin:
+            queryset = queryset.filter(is_active=True)
+        
+        return queryset
     
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -518,7 +528,7 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:
             return ProductUpdateSerializer
-        return ProductSerializer
+        return ProductDetailSerializer
     
     def retrieve(self, request, *args, **kwargs):
         """Override retrieve to return consistent response format"""
@@ -830,3 +840,455 @@ def debug_request_data(request):
             'array_keys': [key for key in request.data.keys() if '[' in key and ']' in key]
         }
     })
+
+
+# Review Views
+class ReviewListCreateView(generics.ListCreateAPIView):
+    """
+    List all reviews for a product or create a new review.
+    Only authenticated users can create reviews.
+    One review per user per product.
+    """
+    serializer_class = ReviewSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['created_at', 'rating', 'helpful_votes']
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Review.objects.none()
+        
+        product_id = self.kwargs.get('product_id')
+        return Review.objects.filter(product_id=product_id).select_related('user')
+    
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return ReviewCreateSerializer
+        return ReviewSerializer
+    
+    @swagger_auto_schema(
+        operation_description="List all reviews for a product",
+        responses={
+            200: openapi.Response(
+                description="Reviews retrieved successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'data': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_OBJECT))
+                    }
+                )
+            )
+        }
+    )
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        
+        return Response({
+            'success': True,
+            'message': 'Reviews retrieved successfully',
+            'data': serializer.data
+        })
+    
+    @swagger_auto_schema(
+        operation_description="Create a new review for a product",
+        request_body=ReviewCreateSerializer,
+        responses={
+            201: openapi.Response(
+                description="Review created successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'data': openapi.Schema(type=openapi.TYPE_OBJECT)
+                    }
+                )
+            ),
+            400: openapi.Response(description="Bad request - validation error")
+        }
+    )
+    def create(self, request, *args, **kwargs):
+        # Set the product_id from URL
+        data = request.data.copy()
+        data['product'] = self.kwargs.get('product_id')
+        
+        serializer = self.get_serializer(data=data)
+        if serializer.is_valid():
+            review = serializer.save()
+            return Response({
+                'success': True,
+                'message': 'Review created successfully',
+                'data': ReviewSerializer(review).data
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response({
+            'success': False,
+            'message': 'Review creation failed',
+            'data': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieve, update or delete a review.
+    Users can only update/delete their own reviews.
+    """
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return ReviewCreateSerializer
+        return ReviewSerializer
+    
+    @swagger_auto_schema(
+        operation_description="Get a specific review",
+        responses={
+            200: openapi.Response(
+                description="Review retrieved successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'data': openapi.Schema(type=openapi.TYPE_OBJECT)
+                    }
+                )
+            ),
+            404: openapi.Response(description="Review not found")
+        }
+    )
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        
+        return Response({
+            'success': True,
+            'message': 'Review retrieved successfully',
+            'data': serializer.data
+        })
+    
+    @swagger_auto_schema(
+        operation_description="Update a review (only review author can update)",
+        request_body=ReviewCreateSerializer,
+        responses={
+            200: openapi.Response(
+                description="Review updated successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'data': openapi.Schema(type=openapi.TYPE_OBJECT)
+                    }
+                )
+            ),
+            403: openapi.Response(description="Forbidden - not the review author")
+        }
+    )
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        # Check if user is the review author
+        if instance.user != request.user and not request.user.is_admin:
+            return Response({
+                'success': False,
+                'message': 'You can only update your own reviews'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        if serializer.is_valid():
+            review = serializer.save()
+            return Response({
+                'success': True,
+                'message': 'Review updated successfully',
+                'data': ReviewSerializer(review).data
+            })
+        
+        return Response({
+            'success': False,
+            'message': 'Review update failed',
+            'data': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(
+        operation_description="Delete a review (only review author can delete)",
+        responses={
+            200: openapi.Response(
+                description="Review deleted successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING)
+                    }
+                )
+            ),
+            403: openapi.Response(description="Forbidden - not the review author")
+        }
+    )
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        # Check if user is the review author
+        if instance.user != request.user and not request.user.is_admin:
+            return Response({
+                'success': False,
+                'message': 'You can only delete your own reviews'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        instance.delete()
+        return Response({
+            'success': True,
+            'message': 'Review deleted successfully'
+        }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+@swagger_auto_schema(
+    operation_description="Mark a review as helpful",
+    responses={
+        200: openapi.Response(
+            description="Review marked as helpful",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                    'data': openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'helpful_votes': openapi.Schema(type=openapi.TYPE_INTEGER)
+                        }
+                    )
+                }
+            )
+        ),
+        404: openapi.Response(description="Review not found")
+    }
+)
+def mark_review_helpful(request, review_id):
+    """
+    Mark a review as helpful (increment helpful_votes).
+    """
+    try:
+        review = Review.objects.get(id=review_id)
+        review.helpful_votes += 1
+        review.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Review marked as helpful',
+            'data': {
+                'helpful_votes': review.helpful_votes
+            }
+        })
+    except Review.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Review not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
+# Category Views
+class CategoryListCreateView(generics.ListCreateAPIView):
+    """
+    List all categories or create a new category (Admin only for create)
+    """
+    serializer_class = CategorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Category.objects.none()
+        
+        # Only show active categories to non-admin users
+        if self.request.user.is_admin:
+            return Category.objects.all()
+        return Category.objects.filter(is_active=True)
+    
+    @swagger_auto_schema(
+        operation_description="Get all categories",
+        responses={
+            200: openapi.Response(
+                description="Categories retrieved successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'data': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_OBJECT))
+                    }
+                )
+            )
+        }
+    )
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        
+        return Response({
+            'success': True,
+            'message': 'Categories retrieved successfully',
+            'data': serializer.data
+        })
+    
+    @swagger_auto_schema(
+        operation_description="Create a new category (Admin only)",
+        request_body=CategorySerializer,
+        responses={
+            201: openapi.Response(
+                description="Category created successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'data': openapi.Schema(type=openapi.TYPE_OBJECT)
+                    }
+                )
+            ),
+            403: openapi.Response(description="Only admins can create categories")
+        }
+    )
+    def create(self, request, *args, **kwargs):
+        # Only admins can create categories
+        if not request.user.is_admin:
+            return Response({
+                'success': False,
+                'message': 'Only admins can create categories'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        
+        return Response({
+            'success': True,
+            'message': 'Category created successfully',
+            'data': serializer.data
+        }, status=status.HTTP_201_CREATED)
+
+
+class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieve, update or delete a category (Admin only for update/delete)
+    """
+    serializer_class = CategorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Category.objects.none()
+        return Category.objects.all()
+    
+    @swagger_auto_schema(
+        operation_description="Get a specific category",
+        responses={
+            200: openapi.Response(
+                description="Category retrieved successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'data': openapi.Schema(type=openapi.TYPE_OBJECT)
+                    }
+                )
+            ),
+            404: openapi.Response(description="Category not found")
+        }
+    )
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        
+        return Response({
+            'success': True,
+            'message': 'Category retrieved successfully',
+            'data': serializer.data
+        })
+    
+    @swagger_auto_schema(
+        operation_description="Update a category (Admin only)",
+        request_body=CategorySerializer,
+        responses={
+            200: openapi.Response(
+                description="Category updated successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'data': openapi.Schema(type=openapi.TYPE_OBJECT)
+                    }
+                )
+            ),
+            403: openapi.Response(description="Only admins can update categories")
+        }
+    )
+    def update(self, request, *args, **kwargs):
+        if not request.user.is_admin:
+            return Response({
+                'success': False,
+                'message': 'Only admins can update categories'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return Response({
+            'success': True,
+            'message': 'Category updated successfully',
+            'data': serializer.data
+        })
+    
+    @swagger_auto_schema(
+        operation_description="Delete a category (Admin only)",
+        responses={
+            200: openapi.Response(
+                description="Category deleted successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        'message': openapi.Schema(type=openapi.TYPE_STRING)
+                    }
+                )
+            ),
+            400: openapi.Response(description="Cannot delete category with existing products"),
+            403: openapi.Response(description="Only admins can delete categories")
+        }
+    )
+    def destroy(self, request, *args, **kwargs):
+        if not request.user.is_admin:
+            return Response({
+                'success': False,
+                'message': 'Only admins can delete categories'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        instance = self.get_object()
+        
+        # Check if any products are using this category
+        product_count = Product.objects.filter(category=instance.name).count()
+        if product_count > 0:
+            return Response({
+                'success': False,
+                'message': f'Cannot delete category. {product_count} products are using this category.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        self.perform_destroy(instance)
+        
+        return Response({
+            'success': True,
+            'message': 'Category deleted successfully'
+        }, status=status.HTTP_200_OK)

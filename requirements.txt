@@ -7,3 +7,4 @@ drf-yasg==1.21.10
 Pillow==11.3.0
 python-decouple==3.8
 PyJWT==2.10.1
+cryptography==43.0.0

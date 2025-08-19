@@ -221,6 +221,10 @@ CORS_ALLOW_CREDENTIALS = True
 # For testing purposes - allow all origins (remove in production)
 CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
 
+# Payment encryption key
+from cryptography.fernet import Fernet
+PAYMENT_ENCRYPTION_KEY = config('PAYMENT_ENCRYPTION_KEY', default=Fernet.generate_key().decode())
+
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',

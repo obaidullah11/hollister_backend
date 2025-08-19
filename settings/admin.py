@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import StoreSettings, TermsAndConditions, PrivacyPolicy
+from .models import StoreSettings, TermsAndConditions, PrivacyPolicy, PaymentMethod
 
 @admin.register(StoreSettings)
 class SettingsAdmin(admin.ModelAdmin):
@@ -80,3 +80,42 @@ class PrivacyPolicyAdmin(admin.ModelAdmin):
         updated = queryset.update(is_active=False)
         self.message_user(request, f'{updated} privacy policy deactivated successfully.')
     deactivate_policy.short_description = "Deactivate selected privacy policy"
+
+
+@admin.register(PaymentMethod)
+class PaymentMethodAdmin(admin.ModelAdmin):
+    list_display = ['provider', 'environment', 'is_active', 'created_at']
+    list_filter = ['provider', 'environment', 'is_active']
+    search_fields = ['provider']
+    readonly_fields = ['created_at', 'updated_at', 'get_masked_api_key', 'get_masked_secret_key']
+    fieldsets = (
+        ('Provider Information', {
+            'fields': ('provider', 'environment', 'is_active')
+        }),
+        ('API Credentials', {
+            'fields': ('api_key', 'secret_key', 'get_masked_api_key', 'get_masked_secret_key'),
+            'description': 'API keys are encrypted before storage. Masked keys show first and last 4 characters only.'
+        }),
+        ('Configuration', {
+            'fields': ('config',),
+            'description': 'Additional configuration in JSON format'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_readonly_fields(self, request, obj=None):
+        # Make provider and environment read-only when editing
+        if obj:
+            return self.readonly_fields + ['provider', 'environment']
+        return self.readonly_fields
+    
+    def get_masked_api_key(self, obj):
+        return obj.get_masked_api_key()
+    get_masked_api_key.short_description = "Masked API Key"
+    
+    def get_masked_secret_key(self, obj):
+        return obj.get_masked_secret_key()
+    get_masked_secret_key.short_description = "Masked Secret Key"

@@ -1,5 +1,23 @@
 from rest_framework import serializers
-from .models import Product, ProductVariant, ProductSize
+from .models import Product, ProductVariant, ProductSize, Review, Category
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    """Serializer for Category model"""
+    product_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'description', 'is_active', 'product_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'product_count', 'created_at', 'updated_at']
+    
+    def get_product_count(self, obj):
+        """Get count of products in this category"""
+        return Product.objects.filter(category=obj.name, is_active=True).count()
+
 
 class ProductSizeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,13 +37,17 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     variants = ProductVariantSerializer(many=True, read_only=True)
     profit_margin = serializers.ReadOnlyField()
+    average_rating = serializers.ReadOnlyField()
+    review_count = serializers.ReadOnlyField()
     
     class Meta:
         model = Product
         fields = [
             'id', 'name', 'sku', 'description', 'gender', 'category',
-            'selling_price', 'purchasing_price', 'material_and_care',
-            'variants', 'profit_margin', 'created_at', 'updated_at'
+            'selling_price', 'purchasing_price', 
+            'material_and_care', 'is_active', 'show_on_homepage', 'variants', 
+            'profit_margin', 'average_rating', 'review_count', 
+            'created_at', 'updated_at'
         ]
 
 class ProductCreateSerializer(serializers.ModelSerializer):
@@ -36,7 +58,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         fields = [
             'name', 'sku', 'description', 'gender', 'category',
             'selling_price', 'purchasing_price', 'material_and_care',
-            'variants_data'
+            'is_active', 'show_on_homepage', 'variants_data'
         ]
     
     def validate_sku(self, value):
@@ -82,7 +104,7 @@ class EnhancedProductCreateSerializer(serializers.ModelSerializer):
         fields = [
             'name', 'sku', 'description', 'gender', 'category',
             'selling_price', 'purchasing_price', 'material_and_care',
-            'variants'
+            'is_active', 'show_on_homepage', 'variants'
         ]
     
     def validate_sku(self, value):
@@ -159,7 +181,8 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'name', 'sku', 'description', 'gender', 'category',
-            'selling_price', 'purchasing_price', 'material_and_care'
+            'selling_price', 'purchasing_price', 'material_and_care',
+            'is_active', 'show_on_homepage'
         ]
     
     def validate_sku(self, value):
@@ -307,3 +330,57 @@ class ProductImageSerializer(serializers.Serializer):
     """
     image = serializers.ImageField()
     caption = serializers.CharField(required=False, allow_blank=True)
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    """Serializer for reading reviews with user information"""
+    user = serializers.StringRelatedField(read_only=True)
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    
+    class Meta:
+        model = Review
+        fields = [
+            'id', 'product', 'user', 'user_id', 'username', 'rating', 
+            'comment', 'is_verified_purchase', 'helpful_votes', 
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['user', 'user_id', 'username', 'is_verified_purchase', 'helpful_votes']
+
+
+class ReviewCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating and updating reviews"""
+    
+    class Meta:
+        model = Review
+        fields = ['product', 'rating', 'comment']
+    
+    def validate_rating(self, value):
+        if value < 1 or value > 5:
+            raise serializers.ValidationError("Rating must be between 1 and 5.")
+        return value
+    
+    def validate(self, data):
+        # Check if user already has a review for this product
+        user = self.context['request'].user
+        product = data['product']
+        
+        if self.instance is None:  # Creating new review
+            if Review.objects.filter(user=user, product=product).exists():
+                raise serializers.ValidationError("You have already reviewed this product.")
+        
+        return data
+    
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        # Check if user has purchased this product to set is_verified_purchase
+        # This logic would check the orders model
+        return super().create(validated_data)
+
+
+class ProductDetailSerializer(ProductSerializer):
+    """Extended product serializer that includes reviews"""
+    reviews = ReviewSerializer(many=True, read_only=True)
+    
+    class Meta(ProductSerializer.Meta):
+        fields = ProductSerializer.Meta.fields + ['reviews']

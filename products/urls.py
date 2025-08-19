@@ -13,6 +13,11 @@ urlpatterns = [
     path('products/<int:product_id>/variants/<int:pk>/', views.ProductVariantDetailView.as_view(), name='variant-detail'),
     path('products/<int:product_id>/images/', views.ProductImageCreateView.as_view(), name='image-create'),
     
+    # Reviews
+    path('products/<int:product_id>/reviews/', views.ReviewListCreateView.as_view(), name='review-list-create'),
+    path('reviews/<int:pk>/', views.ReviewDetailView.as_view(), name='review-detail'),
+    path('reviews/<int:review_id>/helpful/', views.mark_review_helpful, name='review-helpful'),
+    
     # Debug endpoint
     path('debug-request/', views.debug_request_data, name='debug-request'),
     
@@ -21,4 +26,8 @@ urlpatterns = [
     path('admin/product-stats/', views.product_stats, name='product-stats'),
     path('admin/category-stats/', views.category_stats, name='category-stats'),
     path('admin/bulk-update-stock/', views.bulk_update_stock, name='bulk-update-stock'),
+    
+    # Categories
+    path('categories/', views.CategoryListCreateView.as_view(), name='category-list-create'),
+    path('categories/<int:pk>/', views.CategoryDetailView.as_view(), name='category-detail'),
 ]

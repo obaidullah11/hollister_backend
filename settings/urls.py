@@ -12,4 +12,9 @@ urlpatterns = [
     # Privacy Policy endpoints
     path('privacy/', views.privacy_policy_view, name='privacy_policy'),
     path('privacy/manage/', views.privacy_policy_manage_view, name='privacy_manage'),
+    
+    # Payment Method endpoints
+    path('payment-methods/', views.payment_methods_list_create, name='payment_methods_list_create'),
+    path('payment-methods/<int:pk>/', views.payment_method_detail, name='payment_method_detail'),
+    path('payment-methods/<int:pk>/toggle-status/', views.payment_method_toggle_status, name='payment_method_toggle_status'),
 ]
