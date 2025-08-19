@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'orders',
     'settings',
     'banners',
+    'coupons',
 ]
 
 MIDDLEWARE = [
@@ -219,7 +220,7 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 # For testing purposes - allow all origins (remove in production)
-CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=True, cast=bool)
 
 # Payment encryption key
 from cryptography.fernet import Fernet

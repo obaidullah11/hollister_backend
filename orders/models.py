@@ -2,9 +2,12 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from accounts.models import User
 from products.models import Product, ProductVariant, ProductSize
+from decimal import Decimal
 
 class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='carts')
+    applied_coupon = models.ForeignKey('coupons.Coupon', on_delete=models.SET_NULL, null=True, blank=True, related_name='applied_to_carts')
+    coupon_discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -20,8 +23,12 @@ class Cart(models.Model):
         return sum(item.quantity for item in self.items.all())
     
     @property
-    def total_amount(self):
+    def subtotal(self):
         return sum(item.total_price for item in self.items.all())
+    
+    @property
+    def total_amount(self):
+        return self.subtotal - self.coupon_discount_amount
 
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
@@ -67,6 +74,10 @@ class Order(models.Model):
     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     payment_status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.COMPLETED)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    applied_coupon = models.ForeignKey('coupons.Coupon', on_delete=models.SET_NULL, null=True, blank=True, related_name='used_in_orders')
+    coupon_code = models.CharField(max_length=50, blank=True, null=True)
+    coupon_discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     email = models.EmailField()
     phone_number = models.CharField(max_length=20)
@@ -87,6 +98,12 @@ class Order(models.Model):
     @property
     def item_count(self):
         return self.items.count()
+    
+    def calculate_totals(self):
+        """Calculate subtotal and total amount"""
+        self.subtotal = sum(item.total_price for item in self.items.all())
+        self.total_amount = self.subtotal - self.coupon_discount_amount
+        return self.total_amount
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
