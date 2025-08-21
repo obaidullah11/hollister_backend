@@ -12,7 +12,7 @@ class CouponAdmin(admin.ModelAdmin):
         'status_display', 'is_active', 'created_at'
     ]
     list_filter = [
-        'is_active', 'discount_type', 'applicable_to',
+        'is_active', 'discount_type',
         'valid_from', 'valid_to', 'created_at'
     ]
     search_fields = ['code', 'description']
@@ -37,19 +37,13 @@ class CouponAdmin(admin.ModelAdmin):
                 'times_used'
             )
         }),
-        ('Product/Category Restrictions', {
-            'fields': (
-                'applicable_to', 'applicable_products', 
-                'applicable_categories'
-            )
-        }),
+
         ('Metadata', {
             'fields': ('created_by', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         })
     )
-    
-    filter_horizontal = ('applicable_products', 'applicable_categories')
+
     
     def discount_display(self, obj):
         return obj.get_discount_display()
@@ -100,3 +94,6 @@ class CouponUsageHistoryAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         # Prevent editing of usage history
         return False
+
+
+

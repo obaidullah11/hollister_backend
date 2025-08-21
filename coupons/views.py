@@ -13,7 +13,7 @@ from .serializers import (
     CouponValidateSerializer,
     CouponUsageHistorySerializer
 )
-from products.models import Product
+
 
 
 class CouponListCreateView(generics.ListCreateAPIView):
@@ -195,28 +195,8 @@ def validate_coupon(request):
             'data': None
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Calculate discount based on applicable products/categories
-    applicable_items_total = order_total
-    
-    if coupon.applicable_to == Coupon.ApplicableType.SPECIFIC_PRODUCTS and product_ids:
-        # Calculate total for applicable products only
-        applicable_products = Product.objects.filter(
-            id__in=product_ids
-        ).filter(
-            id__in=coupon.applicable_products.values_list('id', flat=True)
-        )
-        # This is simplified - in real implementation, you'd need to consider quantities
-        applicable_items_total = sum(p.selling_price for p in applicable_products)
-    
-    elif coupon.applicable_to == Coupon.ApplicableType.SPECIFIC_CATEGORIES and product_ids:
-        # Calculate total for products in applicable categories
-        applicable_products = Product.objects.filter(
-            id__in=product_ids,
-            category__in=coupon.applicable_categories.values_list('name', flat=True)
-        )
-        applicable_items_total = sum(p.selling_price for p in applicable_products)
-    
-    discount_amount = coupon.calculate_discount(order_total, applicable_items_total)
+    # Calculate discount for the entire order
+    discount_amount = coupon.calculate_discount(order_total)
     
     return Response({
         'success': True,
@@ -300,23 +280,8 @@ def apply_coupon_to_cart(request):
             'data': None
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Calculate discount
-    product_ids = cart.items.values_list('product_id', flat=True)
-    applicable_items_total = cart_total
-    
-    if coupon.applicable_to == Coupon.ApplicableType.SPECIFIC_PRODUCTS:
-        applicable_items = cart.items.filter(
-            product_id__in=coupon.applicable_products.values_list('id', flat=True)
-        )
-        applicable_items_total = sum(item.total_price for item in applicable_items)
-    
-    elif coupon.applicable_to == Coupon.ApplicableType.SPECIFIC_CATEGORIES:
-        applicable_items = cart.items.filter(
-            product__category__in=coupon.applicable_categories.values_list('name', flat=True)
-        )
-        applicable_items_total = sum(item.total_price for item in applicable_items)
-    
-    discount_amount = coupon.calculate_discount(cart_total, applicable_items_total)
+    # Calculate discount for the entire cart
+    discount_amount = coupon.calculate_discount(cart_total)
     
     # Store coupon in session or cart (you might want to add a field to Cart model)
     request.session['applied_coupon'] = {

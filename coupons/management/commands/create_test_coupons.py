@@ -39,7 +39,6 @@ class Command(BaseCommand):
                 'valid_to': timezone.now() + timedelta(days=90),
                 'usage_limit_per_customer': 1,
                 'total_usage_limit': 100,
-                'applicable_to': 'all',
                 'is_active': True,
             },
             {
@@ -52,7 +51,6 @@ class Command(BaseCommand):
                 'valid_to': timezone.now() + timedelta(days=30),
                 'usage_limit_per_customer': 3,
                 'total_usage_limit': None,  # Unlimited total uses
-                'applicable_to': 'all',
                 'is_active': True,
             },
             {
@@ -66,7 +64,6 @@ class Command(BaseCommand):
                 'valid_to': timezone.now() + timedelta(days=60),
                 'usage_limit_per_customer': 2,
                 'total_usage_limit': 50,
-                'applicable_to': 'all',
                 'is_active': True,
             },
         ]
@@ -85,3 +82,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("\nActive coupons:"))
         for coupon in Coupon.objects.filter(is_active=True):
             self.stdout.write(f"- {coupon.code}: {coupon.get_discount_display()} (Min order: ${coupon.minimum_order_amount})")
+
+
+

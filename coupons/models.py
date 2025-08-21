@@ -3,7 +3,6 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from products.models import Product, Category
 
 User = get_user_model()
 
@@ -12,11 +11,6 @@ class Coupon(models.Model):
     class DiscountType(models.TextChoices):
         PERCENTAGE = 'percentage', _('Percentage')
         FIXED_AMOUNT = 'fixed_amount', _('Fixed Amount')
-    
-    class ApplicableType(models.TextChoices):
-        ALL = 'all', _('All Products')
-        SPECIFIC_PRODUCTS = 'specific_products', _('Specific Products')
-        SPECIFIC_CATEGORIES = 'specific_categories', _('Specific Categories')
     
     # Basic Information
     code = models.CharField(
@@ -75,24 +69,7 @@ class Coupon(models.Model):
         help_text="Number of times a single customer can use this coupon"
     )
     
-    # Product/Category Restrictions
-    applicable_to = models.CharField(
-        max_length=30,
-        choices=ApplicableType.choices,
-        default=ApplicableType.ALL
-    )
-    applicable_products = models.ManyToManyField(
-        Product,
-        blank=True,
-        related_name='applicable_coupons',
-        help_text="Products this coupon applies to (if applicable_to is SPECIFIC_PRODUCTS)"
-    )
-    applicable_categories = models.ManyToManyField(
-        Category,
-        blank=True,
-        related_name='applicable_coupons',
-        help_text="Categories this coupon applies to (if applicable_to is SPECIFIC_CATEGORIES)"
-    )
+
     
     # Status and Tracking
     is_active = models.BooleanField(
@@ -152,7 +129,7 @@ class Coupon(models.Model):
         user_usage_count = self.usage_history.filter(used_by=user).count()
         return user_usage_count < self.usage_limit_per_customer
     
-    def calculate_discount(self, order_total, applicable_items_total=None):
+    def calculate_discount(self, order_total):
         """Calculate the discount amount for a given order total"""
         if not self.is_valid():
             return 0
@@ -160,17 +137,14 @@ class Coupon(models.Model):
         if order_total < self.minimum_order_amount:
             return 0
         
-        # Use applicable_items_total if provided (for category/product specific coupons)
-        base_amount = applicable_items_total if applicable_items_total is not None else order_total
-        
         if self.discount_type == self.DiscountType.PERCENTAGE:
-            discount = base_amount * (self.discount_value / 100)
+            discount = order_total * (self.discount_value / 100)
             if self.max_discount_amount:
                 discount = min(discount, self.max_discount_amount)
             return discount
         else:
             # Fixed amount discount
-            return min(self.discount_value, base_amount)
+            return min(self.discount_value, order_total)
 
 
 class CouponUsageHistory(models.Model):
@@ -205,3 +179,6 @@ class CouponUsageHistory(models.Model):
     
     def __str__(self):
         return f"{self.coupon.code} used by {self.used_by.email} on {self.used_at}"
+
+
+

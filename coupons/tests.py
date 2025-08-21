@@ -6,7 +6,6 @@ from decimal import Decimal
 from rest_framework.test import APIClient
 from rest_framework import status
 from .models import Coupon, CouponUsageHistory
-from products.models import Product, Category
 from orders.models import Cart, CartItem, Order
 
 User = get_user_model()
@@ -114,7 +113,6 @@ class CouponAPITest(TestCase):
             'valid_from': timezone.now().isoformat(),
             'valid_to': (timezone.now() + timedelta(days=30)).isoformat(),
             'usage_limit_per_customer': 1,
-            'applicable_to': 'all',
             'is_active': True
         }
     
@@ -176,3 +174,6 @@ class CouponAPITest(TestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(response.data['success'])
+
+
+

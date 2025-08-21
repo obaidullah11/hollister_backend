@@ -1,25 +1,20 @@
 from rest_framework import serializers
 from django.utils import timezone
 from .models import Coupon, CouponUsageHistory
-from products.serializers import ProductSerializer, CategorySerializer
 
 
 class CouponSerializer(serializers.ModelSerializer):
     discount_display = serializers.CharField(source='get_discount_display', read_only=True)
     is_valid = serializers.SerializerMethodField()
     times_available = serializers.SerializerMethodField()
-    applicable_products_detail = ProductSerializer(source='applicable_products', many=True, read_only=True)
-    applicable_categories_detail = CategorySerializer(source='applicable_categories', many=True, read_only=True)
     
     class Meta:
         model = Coupon
         fields = [
             'id', 'code', 'description', 'discount_type', 'discount_value',
             'max_discount_amount', 'minimum_order_amount', 'valid_from', 'valid_to',
-            'total_usage_limit', 'usage_limit_per_customer', 'applicable_to',
-            'applicable_products', 'applicable_categories', 'applicable_products_detail',
-            'applicable_categories_detail', 'is_active', 'times_used', 'discount_display',
-            'is_valid', 'times_available', 'created_at', 'updated_at'
+            'total_usage_limit', 'usage_limit_per_customer', 'is_active', 'times_used', 
+            'discount_display', 'is_valid', 'times_available', 'created_at', 'updated_at'
         ]
         read_only_fields = ['times_used', 'created_at', 'updated_at']
     
@@ -73,19 +68,7 @@ class CouponSerializer(serializers.ModelSerializer):
                 'usage_limit_per_customer': 'Per customer limit cannot exceed total usage limit'
             })
         
-        # Validate applicable products/categories based on applicable_to
-        applicable_to = data.get('applicable_to', 
-                               self.instance.applicable_to if self.instance else 'all')
-        
-        if applicable_to == 'specific_products' and not data.get('applicable_products'):
-            raise serializers.ValidationError({
-                'applicable_products': 'Please select at least one product'
-            })
-        
-        if applicable_to == 'specific_categories' and not data.get('applicable_categories'):
-            raise serializers.ValidationError({
-                'applicable_categories': 'Please select at least one category'
-            })
+
         
         return data
 
@@ -139,3 +122,6 @@ class CouponUsageHistorySerializer(serializers.ModelSerializer):
             'order', 'order_number', 'discount_amount', 'used_at'
         ]
         read_only_fields = ['used_at']
+
+
+

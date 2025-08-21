@@ -44,3 +44,6 @@ class Migration(migrations.Migration):
         migrations.RunPython(populate_categories, reverse_populate),
     ]
 
+
+
+

@@ -41,3 +41,6 @@ print(f"Count: {products_no_cat.count()}")
 for p in products_no_cat:
     print(f"  - {p.name} (ID: {p.id})")
 
+
+
+

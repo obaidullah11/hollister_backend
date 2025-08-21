@@ -62,3 +62,6 @@ class Command(BaseCommand):
         
         self.stdout.write(self.style.SUCCESS(f'\nTotal categories created: {created_count}'))
 
+
+
+

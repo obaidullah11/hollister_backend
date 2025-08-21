@@ -14,3 +14,6 @@ urlpatterns = [
     path('apply/', views.apply_coupon_to_cart, name='apply-coupon'),
     path('remove/', views.remove_coupon_from_cart, name='remove-coupon'),
 ]
+
+
+
