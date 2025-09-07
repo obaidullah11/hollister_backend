@@ -169,6 +169,8 @@ class UpdateCartItemView(generics.UpdateAPIView):
         return super().patch(request, *args, **kwargs)
     
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return CartItem.objects.none()
         return CartItem.objects.filter(cart__user=self.request.user)
     
     def update(self, request, *args, **kwargs):
@@ -231,6 +233,8 @@ class RemoveFromCartView(generics.DestroyAPIView):
         return super().delete(request, *args, **kwargs)
     
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return CartItem.objects.none()
         return CartItem.objects.filter(cart__user=self.request.user)
     
     def destroy(self, request, *args, **kwargs):

@@ -1131,7 +1131,7 @@ class CategoryListCreateView(generics.ListCreateAPIView):
     )
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
         
         return Response({
             'success': True,
@@ -1165,7 +1165,7 @@ class CategoryListCreateView(generics.ListCreateAPIView):
                 'message': 'Only admins can create categories'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         
@@ -1207,7 +1207,7 @@ class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
     )
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(instance)
+        serializer = self.get_serializer(instance, context={'request': request})
         
         return Response({
             'success': True,
@@ -1242,7 +1242,7 @@ class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
         
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance, data=request.data, partial=partial, context={'request': request})
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         

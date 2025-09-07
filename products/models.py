@@ -10,6 +10,7 @@ class Category(models.Model):
     """Independent Category model for product categorization"""
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='category_images/', blank=True, null=True, help_text="Category image")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

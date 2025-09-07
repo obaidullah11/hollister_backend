@@ -6,6 +6,7 @@ from accounts.serializers import UserProfileSerializer
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
+        ref_name = 'OrderProductSerializer'
         fields = [
             'id', 'name', 'sku', 'description', 'selling_price', 'purchasing_price', 
             'category', 'gender', 'material_and_care', 'created_at', 'updated_at'
@@ -14,11 +15,13 @@ class ProductSerializer(serializers.ModelSerializer):
 class ProductVariantSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVariant
+        ref_name = 'OrderProductVariantSerializer'
         fields = ['id', 'name', 'color', 'stock', 'variant_icon', 'variant_picture']
 
 class ProductSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductSize
+        ref_name = 'OrderProductSizeSerializer'
         fields = ['id', 'size', 'stock']
 
 class EnhancedProductSerializer(serializers.ModelSerializer):
@@ -26,6 +29,7 @@ class EnhancedProductSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Product
+        ref_name = 'OrderEnhancedProductSerializer'
         fields = [
             'id', 'name', 'sku', 'description', 'selling_price', 'purchasing_price', 
             'category', 'gender', 'material_and_care', 'variants', 'created_at', 'updated_at'

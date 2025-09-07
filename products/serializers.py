@@ -8,20 +8,31 @@ User = get_user_model()
 class CategorySerializer(serializers.ModelSerializer):
     """Serializer for Category model"""
     product_count = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Category
-        fields = ['id', 'name', 'description', 'is_active', 'product_count', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'description', 'image', 'image_url', 'is_active', 'product_count', 'created_at', 'updated_at']
         read_only_fields = ['id', 'product_count', 'created_at', 'updated_at']
     
     def get_product_count(self, obj):
         """Get count of products in this category"""
         return Product.objects.filter(category=obj.name, is_active=True).count()
+    
+    def get_image_url(self, obj):
+        """Get the URL for the category image"""
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
 
 
 class ProductSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductSize
+        ref_name = 'ProductSizeSerializer'
         fields = ['id', 'size', 'stock']
 
 class ProductVariantSerializer(serializers.ModelSerializer):
@@ -29,6 +40,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = ProductVariant
+        ref_name = 'ProductVariantSerializer'
         fields = [
             'id', 'name', 'color', 'stock', 'variant_icon', 'variant_picture',
             'sizes', 'created_at', 'updated_at'
@@ -42,6 +54,7 @@ class ProductSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Product
+        ref_name = 'ProductSerializer'
         fields = [
             'id', 'name', 'sku', 'description', 'gender', 'category',
             'selling_price', 'purchasing_price', 
@@ -161,18 +174,39 @@ class EnhancedProductCreateSerializer(serializers.ModelSerializer):
         for variant_data in variants_data:
             sizes_data = variant_data.pop('sizes', [])
             
-            # Handle sizes - convert string to list if needed
+            # Handle sizes - support both old and new format
             if isinstance(sizes_data, str):
+                # Old format: comma-separated string
                 sizes_data = [size.strip() for size in sizes_data.split(',')]
-            elif not isinstance(sizes_data, list):
-                sizes_data = []
-            
-            # Create variant
-            variant = ProductVariant.objects.create(product=product, **variant_data)
-            
-            # Create sizes
-            for size in sizes_data:
-                ProductSize.objects.create(variant=variant, size=size, stock=variant.stock)
+                # Create variant
+                variant = ProductVariant.objects.create(product=product, **variant_data)
+                # Create sizes with variant stock
+                for size in sizes_data:
+                    ProductSize.objects.create(variant=variant, size=size, stock=variant.stock)
+            elif isinstance(sizes_data, list) and sizes_data:
+                # Check if it's new format (list of objects with id, size, stock)
+                if isinstance(sizes_data[0], dict) and 'size' in sizes_data[0]:
+                    # New format: list of size objects with individual stock
+                    # Create variant
+                    variant = ProductVariant.objects.create(product=product, **variant_data)
+                    # Create sizes with individual stock
+                    for size_entry in sizes_data:
+                        if size_entry.get('size'):  # Only create if size name is provided
+                            ProductSize.objects.create(
+                                variant=variant, 
+                                size=size_entry['size'], 
+                                stock=size_entry.get('stock', 0)
+                            )
+                else:
+                    # Old format: list of strings
+                    # Create variant
+                    variant = ProductVariant.objects.create(product=product, **variant_data)
+                    # Create sizes with variant stock
+                    for size in sizes_data:
+                        ProductSize.objects.create(variant=variant, size=size, stock=variant.stock)
+            else:
+                # No sizes data or empty list
+                variant = ProductVariant.objects.create(product=product, **variant_data)
         
         return product
 
