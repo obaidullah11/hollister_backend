@@ -133,8 +133,19 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Additional static files directories (only if the directory exists)
+STATICFILES_DIRS = []
+if os.path.exists(os.path.join(BASE_DIR, 'static')):
+    STATICFILES_DIRS.append(os.path.join(BASE_DIR, 'static'))
+
+# Static files finders
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
 
 # Media files
 MEDIA_URL = '/media/'
@@ -309,3 +320,38 @@ LOGGING = {
 import os
 logs_dir = BASE_DIR / 'logs'
 logs_dir.mkdir(exist_ok=True)
+
+# Swagger/OpenAPI Settings for Production
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
+    'USE_SESSION_AUTH': False,
+    'JSON_EDITOR': True,
+    'SUPPORTED_SUBMIT_METHODS': [
+        'get',
+        'post',
+        'put',
+        'delete',
+        'patch'
+    ],
+    'OPERATIONS_SORTER': 'alpha',
+    'TAGS_SORTER': 'alpha',
+    'DOC_EXPANSION': 'none',
+    'DEEP_LINKING': True,
+    'SHOW_EXTENSIONS': True,
+    'SHOW_COMMON_EXTENSIONS': True,
+    'DEFAULT_MODEL_RENDERING': 'example'
+}
+
+# Redoc Settings
+REDOC_SETTINGS = {
+    'LAZY_RENDERING': False,
+    'HIDE_HOSTNAME': False,
+    'EXPAND_RESPONSES': 'all',
+    'PATH_IN_MIDDLE': True
+}

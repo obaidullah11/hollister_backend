@@ -39,6 +39,14 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
+    patterns=[
+        path('api/', include('accounts.urls')),
+        path('api/', include('products.urls')),
+        path('api/', include('orders.urls')),
+        path('api/', include('settings.urls')),
+        path('api/', include('banners.urls')),
+        path('api/', include('coupons.urls')),
+    ],
 )
 
 urlpatterns = [
@@ -64,6 +72,10 @@ urlpatterns = [
     
     # Root URL - redirect to Swagger
     path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    
+    # Alternative OpenAPI endpoints for production
+    path('openapi.json', schema_view.without_ui(cache_timeout=0), name='openapi-schema'),
+    path('api-docs/', schema_view.with_ui('swagger', cache_timeout=0), name='api-docs'),
 ]
 
 # Serve media files in development
