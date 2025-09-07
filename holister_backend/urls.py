@@ -70,8 +70,8 @@ urlpatterns = [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     
-    # Root URL - redirect to Swagger
-    path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    # Root URL - redirect to Swagger (with explicit name)
+    path('', schema_view.with_ui('swagger', cache_timeout=0), name='home'),
     
     # Alternative OpenAPI endpoints for production
     path('openapi.json', schema_view.without_ui(cache_timeout=0), name='openapi-schema'),
