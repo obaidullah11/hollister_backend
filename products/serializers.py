@@ -8,31 +8,20 @@ User = get_user_model()
 class CategorySerializer(serializers.ModelSerializer):
     """Serializer for Category model"""
     product_count = serializers.SerializerMethodField()
-    image_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Category
-        fields = ['id', 'name', 'description', 'image', 'image_url', 'is_active', 'product_count', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'description', 'is_active', 'product_count', 'created_at', 'updated_at']
         read_only_fields = ['id', 'product_count', 'created_at', 'updated_at']
     
     def get_product_count(self, obj):
         """Get count of products in this category"""
         return Product.objects.filter(category=obj.name, is_active=True).count()
-    
-    def get_image_url(self, obj):
-        """Get the URL for the category image"""
-        if obj.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.image.url)
-            return obj.image.url
-        return None
 
 
 class ProductSizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductSize
-        ref_name = 'ProductSizeSerializer'
         fields = ['id', 'size', 'stock']
 
 class ProductVariantSerializer(serializers.ModelSerializer):
@@ -40,7 +29,6 @@ class ProductVariantSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = ProductVariant
-        ref_name = 'ProductVariantSerializer'
         fields = [
             'id', 'name', 'color', 'stock', 'variant_icon', 'variant_picture',
             'sizes', 'created_at', 'updated_at'
@@ -54,7 +42,6 @@ class ProductSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Product
-        ref_name = 'ProductSerializer'
         fields = [
             'id', 'name', 'sku', 'description', 'gender', 'category',
             'selling_price', 'purchasing_price', 
@@ -174,39 +161,18 @@ class EnhancedProductCreateSerializer(serializers.ModelSerializer):
         for variant_data in variants_data:
             sizes_data = variant_data.pop('sizes', [])
             
-            # Handle sizes - support both old and new format
+            # Handle sizes - convert string to list if needed
             if isinstance(sizes_data, str):
-                # Old format: comma-separated string
                 sizes_data = [size.strip() for size in sizes_data.split(',')]
-                # Create variant
-                variant = ProductVariant.objects.create(product=product, **variant_data)
-                # Create sizes with variant stock
-                for size in sizes_data:
-                    ProductSize.objects.create(variant=variant, size=size, stock=variant.stock)
-            elif isinstance(sizes_data, list) and sizes_data:
-                # Check if it's new format (list of objects with id, size, stock)
-                if isinstance(sizes_data[0], dict) and 'size' in sizes_data[0]:
-                    # New format: list of size objects with individual stock
-                    # Create variant
-                    variant = ProductVariant.objects.create(product=product, **variant_data)
-                    # Create sizes with individual stock
-                    for size_entry in sizes_data:
-                        if size_entry.get('size'):  # Only create if size name is provided
-                            ProductSize.objects.create(
-                                variant=variant, 
-                                size=size_entry['size'], 
-                                stock=size_entry.get('stock', 0)
-                            )
-                else:
-                    # Old format: list of strings
-                    # Create variant
-                    variant = ProductVariant.objects.create(product=product, **variant_data)
-                    # Create sizes with variant stock
-                    for size in sizes_data:
-                        ProductSize.objects.create(variant=variant, size=size, stock=variant.stock)
-            else:
-                # No sizes data or empty list
-                variant = ProductVariant.objects.create(product=product, **variant_data)
+            elif not isinstance(sizes_data, list):
+                sizes_data = []
+            
+            # Create variant
+            variant = ProductVariant.objects.create(product=product, **variant_data)
+            
+            # Create sizes
+            for size in sizes_data:
+                ProductSize.objects.create(variant=variant, size=size, stock=variant.stock)
         
         return product
 
@@ -227,20 +193,34 @@ class ProductUpdateSerializer(serializers.ModelSerializer):
         return value
 
 class ProductVariantCreateSerializer(serializers.ModelSerializer):
-    sizes = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
+    sizes = serializers.CharField(write_only=True, required=False)  # Changed to CharField to handle comma-separated values
+    size_stocks = serializers.CharField(write_only=True, required=False)  # Changed to CharField to handle JSON string from FormData
     variant_icon = serializers.CharField(required=False, allow_blank=True)
     variant_picture = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = ProductVariant
         fields = [
-            'name', 'color', 'stock', 'variant_icon', 'variant_picture', 'sizes'
+            'name', 'color', 'stock', 'variant_icon', 'variant_picture', 'sizes', 'size_stocks'
         ]
     
     def create(self, validated_data):
-        sizes_data = validated_data.pop('sizes', [])
+        sizes_data = validated_data.pop('sizes', '')
+        size_stocks_raw = validated_data.pop('size_stocks', '')
         variant_icon_data = validated_data.pop('variant_icon', None)
         variant_picture_data = validated_data.pop('variant_picture', None)
+        
+        # Parse size_stocks if it's a JSON string
+        size_stocks_data = []
+        if size_stocks_raw:
+            try:
+                import json
+                if isinstance(size_stocks_raw, str):
+                    size_stocks_data = json.loads(size_stocks_raw)
+                else:
+                    size_stocks_data = size_stocks_raw
+            except (json.JSONDecodeError, TypeError):
+                size_stocks_data = []
         
         # Create variant without images first
         variant = super().create(validated_data)
@@ -287,9 +267,21 @@ class ProductVariantCreateSerializer(serializers.ModelSerializer):
                 # If base64 conversion fails, ignore the image
                 pass
         
-        # Create sizes
-        for size in sizes_data:
-            ProductSize.objects.create(variant=variant, size=size, stock=variant.stock)
+        # Create sizes with individual stock values
+        if size_stocks_data:
+            # Use individual size stock data if provided
+            for size_stock in size_stocks_data:
+                if 'size' in size_stock and 'stock' in size_stock:
+                    ProductSize.objects.create(
+                        variant=variant, 
+                        size=size_stock['size'], 
+                        stock=int(size_stock['stock'])
+                    )
+        elif sizes_data:
+            # Fallback to comma-separated sizes with variant stock
+            sizes_list = [size.strip() for size in sizes_data.split(',') if size.strip()]
+            for size in sizes_list:
+                ProductSize.objects.create(variant=variant, size=size, stock=variant.stock)
         
         variant.save()
         return variant
